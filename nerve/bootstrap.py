@@ -154,6 +154,7 @@ class SetupChoices:
     timezone: str = "America/New_York"
     user_name: str = ""
     telegram_bot_token: str = ""
+    password: str = ""  # plaintext during wizard, hashed at write time
     enabled_crons: list[str] = field(default_factory=list)
     # worker-specific
     task_description: str = ""
@@ -186,6 +187,7 @@ class SetupWizard:
         self._step_mode()
         self._step_api_keys()
         self._step_workspace()
+        self._step_password()
         if self.choices.mode == "personal":
             self._step_identity()
             self._step_channels()
@@ -455,6 +457,36 @@ class SetupWizard:
         )
         click.echo()
 
+    # --- Step: Password ---
+
+    def _step_password(self) -> None:
+        click.clear()
+        click.secho(self._next_step("Web UI Password"), fg="cyan", bold=True)
+        click.echo()
+        click.secho(
+            "The web UI at localhost:8900 requires a password.\n"
+            "Set one now, or press Enter to skip (dev mode — no auth).",
+            dim=True,
+        )
+        click.echo()
+
+        while True:
+            pw = click.prompt("Password (Enter to skip)", default="", hide_input=True)
+            if not pw:
+                click.echo()
+                click.secho("  → Skipping — running in dev mode (no password).", fg="yellow")
+                click.secho("    You can set one later in config.local.yaml.", dim=True)
+                break
+            pw2 = click.prompt("Confirm password", hide_input=True)
+            if pw == pw2:
+                self.choices.password = pw
+                click.echo()
+                click.secho("  ✓ Password set", fg="green")
+                break
+            click.secho("  Passwords don't match. Try again.", fg="yellow")
+
+        click.echo()
+
     # --- Step: Identity (personal only) ---
 
     def _step_identity(self) -> None:
@@ -535,8 +567,7 @@ class SetupWizard:
             click.secho(f"  │  Schedule: {cron['schedule']:<39}│", dim=True)
             click.secho("  └─" + "─" * 52 + "┘", dim=True)
 
-            is_default = cron["id"] in ("inbox-processor", "task-planner")
-            if click.confirm(f"  Enable {cron['name'].lower()}?", default=is_default):
+            if click.confirm(f"  Enable {cron['name'].lower()}?", default=True):
                 enabled.append(cron["id"])
             click.echo()
 
@@ -600,6 +631,8 @@ class SetupWizard:
         click.secho(f"  │  Mode:       {self.choices.mode:<33}│")
         click.secho(f"  │  Workspace:  {ws:<33}│")
         click.secho(f"  │  API keys:   {api_status:<33}│")
+        pw_status = "set" if self.choices.password else "none (dev mode)"
+        click.secho(f"  │  Password:   {pw_status:<33}│")
 
         if self.choices.mode == "personal":
             click.secho(f"  │  Telegram:   {tg_status:<33}│")
@@ -766,10 +799,18 @@ class SetupWizard:
                 "bot_token": self.choices.telegram_bot_token,
             }
 
-        # Generate JWT secret for auth
-        local["auth"] = {
+        # Auth: JWT secret + optional password hash
+        auth: dict[str, str] = {
             "jwt_secret": secrets.token_hex(32),
         }
+        if self.choices.password:
+            import bcrypt
+            hashed = bcrypt.hashpw(
+                self.choices.password.encode("utf-8"),
+                bcrypt.gensalt(),
+            ).decode("utf-8")
+            auth["password_hash"] = hashed
+        local["auth"] = auth
 
         local_path = self.config_dir / "config.local.yaml"
         with open(local_path, "w") as f:
@@ -910,8 +951,9 @@ def run_non_interactive(config_dir: Path) -> SetupChoices:
     choices.workspace_path = Path(os.environ.get("NERVE_WORKSPACE", default_ws))
     choices.timezone = os.environ.get("NERVE_TIMEZONE", "America/New_York")
     choices.telegram_bot_token = os.environ.get("NERVE_TELEGRAM_BOT_TOKEN", "")
+    choices.password = os.environ.get("NERVE_PASSWORD", "")
 
-    # In non-interactive personal mode, enable inbox-processor and task-planner by default
+    # In non-interactive personal mode, enable all productivity crons by default
     if choices.mode == "personal":
         choices.enabled_crons = ["inbox-processor", "task-planner"]
     # Worker mode: no productivity crons by default

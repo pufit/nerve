@@ -416,11 +416,58 @@ class MemUBridge:
 
             sqlite_models._merge_models = patched_merge
 
-            # Fix 6: SQLiteStore._create_tables() calls SQLModel.metadata.create_all()
-            # on the GLOBAL metadata, which can include stale or conflicting table
-            # registrations (e.g. tables named "sqlite_*" that SQLite reserves).
-            # The memu tables use a scoped MetaData object, so the global call is
-            # unnecessary and can fail on fresh databases.  Patch it out.
+            # Fix 6: memu-py uses table names prefixed with "sqlite_" (e.g.
+            # "sqlite_resources") which SQLite reserves for internal use.
+            # Patch get_sqlite_sqlalchemy_models to rename them to "memu_*".
+            # Also skip the global SQLModel.metadata.create_all() call in
+            # _create_tables which can include stale registrations.
+            import memu.database.sqlite.schema as schema_mod
+            _original_get_models = schema_mod.get_sqlite_sqlalchemy_models
+
+            def _patched_get_models(*, scope_model=None):
+                # Clear the model cache to force rebuild with new names
+                schema_mod._MODEL_CACHE.clear()
+
+                from memu.database.sqlite.models import (
+                    SQLiteResourceModel as _Res,
+                    SQLiteMemoryCategoryModel as _Cat,
+                    SQLiteMemoryItemModel as _Item,
+                    SQLiteCategoryItemModel as _Rel,
+                    build_sqlite_table_model,
+                )
+                from sqlalchemy import MetaData
+
+                metadata_obj = MetaData()
+                scope = scope_model or BaseModel
+
+                resource_model = build_sqlite_table_model(scope, _Res, tablename="memu_resources", metadata=metadata_obj)
+                category_model = build_sqlite_table_model(scope, _Cat, tablename="memu_memory_categories", metadata=metadata_obj)
+                item_model = build_sqlite_table_model(scope, _Item, tablename="memu_memory_items", metadata=metadata_obj)
+                rel_model = build_sqlite_table_model(scope, _Rel, tablename="memu_category_items", metadata=metadata_obj)
+
+                from sqlmodel import SQLModel as _SM
+
+                class SQLiteBase(_SM):
+                    __abstract__ = True
+                    metadata = metadata_obj
+
+                from memu.database.sqlite.schema import SQLiteSQLAModels
+                models = SQLiteSQLAModels(
+                    Base=SQLiteBase,
+                    Resource=resource_model,
+                    MemoryCategory=category_model,
+                    MemoryItem=item_model,
+                    CategoryItem=rel_model,
+                )
+                schema_mod._MODEL_CACHE[scope] = models
+                return models
+
+            schema_mod.get_sqlite_sqlalchemy_models = _patched_get_models
+
+            # Also patch the reference in sqlite.py which imported it at module level
+            import memu.database.sqlite.sqlite as sqlite_store_mod
+            sqlite_store_mod.get_sqlite_sqlalchemy_models = _patched_get_models
+
             from memu.database.sqlite.sqlite import SQLiteStore
 
             def _safe_create_tables(self):

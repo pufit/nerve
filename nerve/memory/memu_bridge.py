@@ -826,6 +826,19 @@ class MemUBridge:
                     "preprocess_llm_profile": memorize_profile,
                     "memory_extract_llm_profile": memorize_profile,
                     "category_update_llm_profile": fast_profile,
+                    # Pass Nerve's configured categories to memU so the LLM
+                    # prompt only shows categories that actually exist in the
+                    # name→ID mapping.  Without this, memU's 10 hard-coded
+                    # defaults leak into the prompt while the mapping only
+                    # contains Nerve's categories — causing lookup mismatches.
+                    **(
+                        {"memory_categories": [
+                            {"name": c.name, "description": c.description}
+                            for c in self.config.memory.categories
+                        ]}
+                        if self.config.memory.categories
+                        else {}  # no Nerve categories → use memU defaults
+                    ),
                     "memory_type_prompts": {
                         "event": {
                             "rules": {"ordinal": 30, "prompt": _EVENT_CUSTOM_RULES},
@@ -852,6 +865,23 @@ class MemUBridge:
             # Mark categories as ready so memU's _initialize_categories
             # doesn't re-embed all default categories on every memorize().
             self._service._context.categories_ready = True
+
+            # Populate category name→ID mapping from DB.
+            # _initialize_categories (which normally does this) is skipped
+            # because we set categories_ready=True above.  On restart,
+            # _ensure_categories also skips categories that already exist,
+            # so the mapping would stay empty without this block.
+            ctx = self._service._get_context()
+            ctx.category_ids = []
+            ctx.category_name_to_id = {}
+            for cat_id, cat in self._service.database.memory_category_repo.categories.items():
+                ctx.category_ids.append(cat.id)
+                ctx.category_name_to_id[cat.name.lower()] = cat.id
+            if ctx.category_name_to_id:
+                logger.info(
+                    "Populated category mapping: %d categories",
+                    len(ctx.category_name_to_id),
+                )
 
             # Warm up the Anthropic LLM clients.  The first HTTP request on
             # a fresh AsyncOpenAI→httpx connection to Anthropic's Cloudflare

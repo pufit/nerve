@@ -502,11 +502,38 @@ def doctor(ctx: click.Context) -> None:
     else:
         errors.append(f"[ERR] Workspace not found: {config.workspace}")
 
+    # Check proxy
+    if config.proxy.enabled:
+        binary = config.proxy.binary_path.expanduser()
+        if binary.exists():
+            click.echo(f"[OK] CLIProxyAPI binary: {binary}")
+        else:
+            warnings.append(f"[WARN] CLIProxyAPI binary not found (will download on start): {binary}")
+        click.echo(f"[OK] Proxy configured: {config.proxy.host}:{config.proxy.port}")
+        try:
+            import httpx
+            resp = httpx.get(
+                f"http://{config.proxy.host}:{config.proxy.port}/v1/models",
+                headers={"x-api-key": config.proxy.api_key},
+                timeout=3,
+            )
+            if resp.status_code == 200:
+                click.echo("[OK] Proxy is running and healthy")
+            else:
+                warnings.append(f"[WARN] Proxy returned status {resp.status_code}")
+        except Exception:
+            warnings.append("[WARN] Proxy not running (starts with Nerve)")
+
     # Check API keys
-    if config.anthropic_api_key:
+    if config.proxy.enabled:
+        if config.anthropic_api_key:
+            click.echo(f"[--] Anthropic API key set (proxy takes precedence)")
+        else:
+            click.echo("[--] Anthropic API key not set (using proxy)")
+    elif config.anthropic_api_key:
         click.echo(f"[OK] Anthropic API key: ...{config.anthropic_api_key[-4:]}")
     else:
-        errors.append("[ERR] Anthropic API key not set (config.local.yaml)")
+        errors.append("[ERR] Anthropic API key not set and proxy not enabled (config.local.yaml)")
 
     if config.openai_api_key:
         click.echo(f"[OK] OpenAI API key: ...{config.openai_api_key[-4:]}")

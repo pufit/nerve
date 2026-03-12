@@ -111,9 +111,44 @@ Sources pull data from external services on a schedule. See [sources.md](sources
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `anthropic_api_key` | string | Anthropic API key (agent + memU chat) |
+| `anthropic_api_key` | string | Anthropic API key (agent + memU chat). Not required when proxy is enabled. |
 | `openai_api_key` | string | OpenAI API key (memU embeddings only) |
 | `brave_search_api_key` | string | Brave Search API key (optional) |
+
+## Proxy (CLIProxyAPI)
+
+Optional local proxy that routes Anthropic API calls through Claude Code's OAuth authentication instead of a direct API key. When enabled, the API key is not required — all API calls go through the proxy at `localhost`.
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `proxy.enabled` | bool | `false` | Enable CLIProxyAPI proxy |
+| `proxy.port` | int | `8317` | Proxy listen port |
+| `proxy.host` | string | `127.0.0.1` | Proxy bind address |
+| `proxy.binary_path` | path | `~/.nerve/bin/cli-proxy-api` | Path to CLIProxyAPI binary (auto-downloaded if missing) |
+| `proxy.auth_dir` | path | `~/.nerve/cli-proxy-auth` | Directory for OAuth token storage |
+| `proxy.api_key` | string | `sk-nerve-local-proxy` | Local auth key between Nerve and the proxy |
+| `proxy.log_file` | path | `~/.nerve/proxy.log` | Proxy log file |
+
+**Setup:**
+```bash
+# During nerve init, choose "Claude Code proxy" at the API configuration step.
+# Or enable manually:
+```
+
+```yaml
+# config.yaml
+proxy:
+  enabled: true
+  port: 8317
+```
+
+```bash
+# Authenticate with Claude (one-time):
+~/.nerve/bin/cli-proxy-api --claude-login --no-browser \
+  --config ~/.nerve/cli-proxy-config.yaml
+```
+
+The proxy binary is automatically downloaded from [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) on first start if not present. OAuth tokens are refreshed automatically.
 
 ## Sessions
 

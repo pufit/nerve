@@ -20,11 +20,11 @@ The `nerve init` wizard walks you through deployment, mode selection, API keys, 
 ### Server deployment
 - Python 3.12+
 - Node.js 18+ (for web UI build)
-- Anthropic API key
+- Anthropic API key **or** Claude subscription (via CLIProxyAPI proxy)
 
 ### Docker deployment
 - Docker with Compose V2 (`docker compose`)
-- Anthropic API key
+- Anthropic API key **or** Claude subscription (via CLIProxyAPI proxy)
 
 ## Installation
 
@@ -78,11 +78,14 @@ docker compose logs -f   # Follow logs
 **Non-interactive Docker setup** (CI / automation):
 ```bash
 cp .env.example .env
-# Edit .env with your ANTHROPIC_API_KEY
+# Edit .env with your ANTHROPIC_API_KEY (or set NERVE_USE_PROXY=1)
 docker compose up
 ```
 
 The entrypoint runs `nerve init --if-needed --non-interactive` before starting, using environment variables from `.env`.
+
+**Using CLIProxyAPI instead of an API key:**
+Set `NERVE_USE_PROXY=1` in your environment (no `ANTHROPIC_API_KEY` required). The proxy authenticates via Claude Code's OAuth — requires a Claude Max/Pro subscription at claude.ai. See [config.md](config.md#proxy-cliproxyapi) for details.
 
 **Volumes:**
 | Mount | Purpose |

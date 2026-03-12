@@ -184,7 +184,11 @@ class SourceRunner:
         except ImportError:
             logger.warning("anthropic package not available for content condensation")
             return None
-        self._condense_client = anthropic.AsyncAnthropic(api_key=api_key)
+        base_url = self.condense_config.get("base_url")
+        kwargs: dict[str, Any] = {"api_key": api_key}
+        if base_url:
+            kwargs["base_url"] = base_url.rstrip("/")
+        self._condense_client = anthropic.AsyncAnthropic(**kwargs)
         return self._condense_client
 
     async def _condense_long_content(

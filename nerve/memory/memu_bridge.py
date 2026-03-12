@@ -690,8 +690,8 @@ class MemUBridge:
 
             llm_profiles: dict[str, Any] = {
                 "default": {
-                    "base_url": "https://api.anthropic.com/v1/",
-                    "api_key": self.config.anthropic_api_key,
+                    "base_url": self.config.anthropic_api_base_url,
+                    "api_key": self.config.effective_api_key,
                     "chat_model": self.config.memory.recall_model,
                     "client_backend": "sdk",
                 },
@@ -712,8 +712,8 @@ class MemUBridge:
             fast_profile = "default"
             if self.config.memory.fast_model:
                 llm_profiles["fast"] = {
-                    "base_url": "https://api.anthropic.com/v1/",
-                    "api_key": self.config.anthropic_api_key,
+                    "base_url": self.config.anthropic_api_base_url,
+                    "api_key": self.config.effective_api_key,
                     "chat_model": self.config.memory.fast_model,
                     "client_backend": "sdk",
                 }
@@ -723,8 +723,8 @@ class MemUBridge:
             memorize_profile = "default"
             if self.config.memory.memorize_model:
                 llm_profiles["memorize"] = {
-                    "base_url": "https://api.anthropic.com/v1/",
-                    "api_key": self.config.anthropic_api_key,
+                    "base_url": self.config.anthropic_api_base_url,
+                    "api_key": self.config.effective_api_key,
                     "chat_model": self.config.memory.memorize_model,
                     "client_backend": "sdk",
                 }
@@ -1398,8 +1398,10 @@ class MemUBridge:
         if self._anthropic_client is not None:
             return self._anthropic_client
         import anthropic
+        base_url = self.config.anthropic_api_base_url.rstrip("/")
         self._anthropic_client = anthropic.Anthropic(
-            api_key=self.config.anthropic_api_key,
+            api_key=self.config.effective_api_key,
+            base_url=base_url,
             timeout=60.0,
         )
         return self._anthropic_client

@@ -35,10 +35,11 @@ def build_source_runners(
 
     # Build condense config from API credentials
     condense_cfg: dict[str, str] | None = None
-    if config.anthropic_api_key and config.memory.fast_model:
+    if config.effective_api_key and config.memory.fast_model:
         condense_cfg = {
-            "api_key": config.anthropic_api_key,
+            "api_key": config.effective_api_key,
             "model": config.memory.fast_model,
+            "base_url": config.anthropic_api_base_url,
         }
 
     # Telegram

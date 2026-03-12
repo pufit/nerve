@@ -1222,13 +1222,14 @@ class AgentEngine:
         """Generate a meaningful short title for a session using Haiku."""
         try:
             import httpx
-            api_key = self.config.anthropic_api_key
+            api_key = self.config.effective_api_key
             if not api_key:
                 return
 
+            base_url = self.config.anthropic_api_base_url
             async with httpx.AsyncClient() as http_client:
                 resp = await http_client.post(
-                    "https://api.anthropic.com/v1/messages",
+                    f"{base_url}messages",
                     headers={
                         "x-api-key": api_key,
                         "anthropic-version": "2023-06-01",

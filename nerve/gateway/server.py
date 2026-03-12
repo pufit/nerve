@@ -57,6 +57,18 @@ async def lifespan(app: FastAPI):
     # Clear CLAUDECODE env var to prevent nested session detection by claude-agent-sdk
     os.environ.pop("CLAUDECODE", None)
 
+    # Start CLIProxyAPI if enabled (must be up before engine/memU initializes)
+    proxy_service = None
+    if config.proxy.enabled:
+        from nerve.proxy.service import ProxyService
+        proxy_service = ProxyService(config)
+        try:
+            await proxy_service.start()
+            logger.info("CLIProxyAPI proxy started on port %d", config.proxy.port)
+        except Exception as e:
+            logger.error("CLIProxyAPI proxy failed to start: %s", e)
+            raise
+
     # Initialize database
     db_path = Path("~/.nerve/nerve.db").expanduser()
     db = await init_db(db_path)
@@ -187,6 +199,8 @@ async def lifespan(app: FastAPI):
         telegram_task.cancel()
     await _engine.shutdown()
     await close_db()
+    if proxy_service:
+        await proxy_service.stop()
     logger.info("Nerve shut down")
 
 

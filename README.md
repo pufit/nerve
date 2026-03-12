@@ -37,6 +37,9 @@ For Docker / non-interactive environments:
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-... nerve init --non-interactive
+
+# Or use Claude subscription instead of API key:
+NERVE_USE_PROXY=1 nerve init --non-interactive
 ```
 
 ## Configuration
@@ -92,6 +95,7 @@ pytest tests/test_db.py::TestSchemaMigration -v
 ```
 
 Tests cover:
+- **`test_proxy.py`** (32 tests) — ProxyConfig, NerveConfig proxy properties, ProxyService lifecycle, binary download, health checks, bootstrap proxy mode, subsystem wiring
 - **`test_bootstrap.py`** (15 tests) — Fresh install detection, non-interactive setup, deferred writes, CLI integration, config permissions
 - **`test_db.py`** (31 tests) — Schema V3 migration, session CRUD, field updates, lifecycle events, channel mappings, cleanup queries, backward compatibility
 - **`test_sessions.py`** (41 tests) — SessionManager lifecycle transitions, channel persistence, running state, fork/resume, cron/hook sessions, archive/cleanup, orphan recovery, race condition regression
@@ -102,5 +106,5 @@ Tests cover:
 - Python 3.12+
 - Node.js 18+ (for web UI build)
 - Claude Code CLI (bundled with claude-agent-sdk)
-- Anthropic API key
+- Anthropic API key **or** Claude subscription via [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) proxy
 - Optional: OpenAI API key (for memU embeddings), Telegram bot token, gog CLI, gh CLI

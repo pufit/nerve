@@ -150,6 +150,7 @@ class SetupChoices:
     mode: str = "personal"
     anthropic_api_key: str = ""
     openai_api_key: str = ""
+    use_proxy: bool = False  # Use CLIProxyAPI instead of direct API key
     workspace_path: Path = field(default_factory=lambda: Path("~/nerve-workspace"))
     timezone: str = "America/New_York"
     user_name: str = ""
@@ -397,22 +398,26 @@ class SetupWizard:
 
     def _step_api_keys(self) -> None:
         click.clear()
-        click.secho(self._next_step("API Keys"), fg="cyan", bold=True)
+        click.secho(self._next_step("API Configuration"), fg="cyan", bold=True)
         click.echo()
         click.secho(
-            "Nerve uses Claude as its AI engine. You need an Anthropic API key.\n"
-            "Get one at: https://console.anthropic.com",
+            "Nerve needs access to Claude's API for memory, titles, and\n"
+            "other background tasks. Choose how to authenticate:",
             dim=True,
         )
         click.echo()
+        click.secho("  1) Anthropic API key  — direct access (requires sk-ant-... key)", dim=True)
+        click.secho("  2) Claude Code proxy  — routes through your Claude subscription", dim=True)
+        click.echo()
 
-        while True:
-            key = click.prompt("Anthropic API key", hide_input=True)
-            if key.startswith("sk-ant-"):
-                self.choices.anthropic_api_key = key
-                break
-            click.secho("  Invalid key — should start with 'sk-ant-'. Try again.", fg="yellow")
+        auth_mode = click.prompt("Choose", type=click.Choice(["1", "2"]), default="1")
 
+        if auth_mode == "2":
+            self._step_proxy_setup()
+        else:
+            self._step_api_key_direct()
+
+        # OpenAI key (optional, for embeddings — applies to both modes)
         click.echo()
         click.secho(
             "Optionally, an OpenAI key enables better memory search\n"
@@ -426,8 +431,94 @@ class SetupWizard:
             self.choices.openai_api_key = openai_key
 
         click.echo()
-        click.secho("  ✓ API keys configured", fg="green")
+        click.secho("  ✓ API configuration complete", fg="green")
         click.echo()
+
+    def _step_api_key_direct(self) -> None:
+        """Prompt for a direct Anthropic API key."""
+        click.echo()
+        click.secho(
+            "Get an API key at: https://console.anthropic.com",
+            dim=True,
+        )
+        click.echo()
+
+        while True:
+            key = click.prompt("Anthropic API key", hide_input=True)
+            if key.startswith("sk-ant-"):
+                self.choices.anthropic_api_key = key
+                break
+            click.secho("  Invalid key — should start with 'sk-ant-'. Try again.", fg="yellow")
+
+    def _step_proxy_setup(self) -> None:
+        """Set up CLIProxyAPI for Claude Code OAuth proxy."""
+        import asyncio
+
+        click.echo()
+        click.secho(
+            "Setting up CLIProxyAPI — this routes API calls through your\n"
+            "Claude Max/Pro subscription using OAuth.\n\n"
+            "Requires an active Claude subscription at claude.ai.",
+            dim=True,
+        )
+        click.echo()
+
+        self.choices.use_proxy = True
+
+        # Download the binary.
+        click.echo("  Downloading CLIProxyAPI...", nl=False)
+        try:
+            from nerve.config import ProxyConfig
+            from nerve.proxy.service import ProxyService
+
+            # Build a minimal config just for the proxy service to use.
+            from nerve.config import NerveConfig
+            tmp_config = NerveConfig(proxy=ProxyConfig(enabled=True))
+            proxy = ProxyService(tmp_config)
+            asyncio.get_event_loop().run_until_complete(proxy.ensure_binary())
+            click.secho(" ✓", fg="green")
+        except Exception as e:
+            click.secho(f" ✗", fg="red")
+            click.secho(f"  Failed to download: {e}", fg="red")
+            click.secho("  You can install manually later. See:", dim=True)
+            click.secho("  https://github.com/router-for-me/CLIProxyAPI", dim=True)
+            click.echo()
+            # Fall back to API key.
+            if click.confirm("  Fall back to API key?", default=True):
+                self.choices.use_proxy = False
+                self._step_api_key_direct()
+                return
+            return
+
+        # Run OAuth login.
+        click.echo()
+        click.secho(
+            "  Now you need to authenticate with Claude. A URL will be\n"
+            "  printed — open it in your browser and authorize access.",
+            dim=True,
+        )
+        click.echo()
+
+        if click.confirm("  Ready to authenticate?", default=True):
+            click.echo()
+            success = asyncio.get_event_loop().run_until_complete(
+                proxy.login(no_browser=True),
+            )
+            click.echo()
+            if success:
+                click.secho("  ✓ Claude OAuth configured", fg="green")
+            else:
+                click.secho("  ✗ OAuth login failed", fg="red")
+                if click.confirm("  Fall back to API key?", default=True):
+                    self.choices.use_proxy = False
+                    self._step_api_key_direct()
+        else:
+            click.secho(
+                "\n  You can authenticate later by running:\n"
+                "    ~/.nerve/bin/cli-proxy-api --claude-login --no-browser \\\n"
+                "      --config ~/.nerve/cli-proxy-config.yaml",
+                dim=True,
+            )
 
     # --- Step: Workspace ---
 
@@ -764,7 +855,10 @@ class SetupWizard:
         click.echo()
 
         ws = str(self.choices.workspace_path)
-        api_status = "Anthropic ✓"
+        if self.choices.use_proxy:
+            api_status = "Proxy ✓"
+        else:
+            api_status = "Anthropic ✓"
         if self.choices.openai_api_key:
             api_status += "  OpenAI ✓"
         else:
@@ -940,6 +1034,12 @@ class SetupWizard:
                 "github_events": {"enabled": self.choices.github_sync},
             }
 
+        if self.choices.use_proxy:
+            config["proxy"] = {
+                "enabled": True,
+                "port": 8317,
+            }
+
         if self.choices.deployment == "docker":
             config["docker"] = {
                 "extra_mounts": [],  # e.g. ["~/code:/code", "~/projects:/projects"]
@@ -954,9 +1054,10 @@ class SetupWizard:
 
     def _write_config_local_yaml(self) -> None:
         """Write config.local.yaml with secrets."""
-        local: dict[str, Any] = {
-            "anthropic_api_key": self.choices.anthropic_api_key,
-        }
+        local: dict[str, Any] = {}
+
+        if self.choices.anthropic_api_key:
+            local["anthropic_api_key"] = self.choices.anthropic_api_key
 
         if self.choices.openai_api_key:
             local["openai_api_key"] = self.choices.openai_api_key
@@ -1090,11 +1191,21 @@ def run_non_interactive(config_dir: Path) -> SetupChoices:
     """Non-interactive setup using environment variables. For Docker."""
     choices = SetupChoices()
 
-    # Required
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        raise click.ClickException("ANTHROPIC_API_KEY environment variable is required for non-interactive setup")
-    choices.anthropic_api_key = api_key
+    # API auth: either API key or proxy mode
+    use_proxy = os.environ.get("NERVE_USE_PROXY", "") == "1"
+    choices.use_proxy = use_proxy
+
+    if use_proxy:
+        # Proxy mode — API key not required.
+        choices.anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    else:
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            raise click.ClickException(
+                "ANTHROPIC_API_KEY environment variable is required for non-interactive setup "
+                "(or set NERVE_USE_PROXY=1 to use CLIProxyAPI instead)"
+            )
+        choices.anthropic_api_key = api_key
 
     # Auto-detect Docker via env var
     is_docker = os.environ.get("NERVE_DOCKER", "") == "1"

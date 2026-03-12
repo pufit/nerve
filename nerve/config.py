@@ -352,6 +352,31 @@ class DockerConfig:
 
 
 @dataclass
+class ProxyConfig:
+    """CLIProxyAPI — optional local proxy for routing API calls through Claude Code OAuth."""
+
+    enabled: bool = False
+    port: int = 8317
+    host: str = "127.0.0.1"
+    binary_path: Path = field(default_factory=lambda: Path("~/.nerve/bin/cli-proxy-api"))
+    auth_dir: Path = field(default_factory=lambda: Path("~/.nerve/cli-proxy-auth"))
+    api_key: str = "sk-nerve-local-proxy"   # local-only auth between Nerve and the proxy
+    log_file: Path = field(default_factory=lambda: Path("~/.nerve/proxy.log"))
+
+    @classmethod
+    def from_dict(cls, d: dict) -> ProxyConfig:
+        return cls(
+            enabled=d.get("enabled", False),
+            port=d.get("port", 8317),
+            host=d.get("host", "127.0.0.1"),
+            binary_path=_expand_path(d.get("binary_path", "~/.nerve/bin/cli-proxy-api")) or Path("~/.nerve/bin/cli-proxy-api"),
+            auth_dir=_expand_path(d.get("auth_dir", "~/.nerve/cli-proxy-auth")) or Path("~/.nerve/cli-proxy-auth"),
+            api_key=d.get("api_key", "sk-nerve-local-proxy"),
+            log_file=_expand_path(d.get("log_file", "~/.nerve/proxy.log")) or Path("~/.nerve/proxy.log"),
+        )
+
+
+@dataclass
 class NerveConfig:
     workspace: Path = field(default_factory=lambda: Path("~/nerve-workspace"))
     timezone: str = "America/New_York"
@@ -369,11 +394,26 @@ class NerveConfig:
     channels: ChannelsConfig = field(default_factory=ChannelsConfig)
     notifications: NotificationsConfig = field(default_factory=NotificationsConfig)
     docker: DockerConfig = field(default_factory=DockerConfig)
+    proxy: ProxyConfig = field(default_factory=ProxyConfig)
 
     # API keys (from config.local.yaml)
     anthropic_api_key: str = ""
     openai_api_key: str = ""
     brave_search_api_key: str = ""
+
+    @property
+    def anthropic_api_base_url(self) -> str:
+        """Effective Anthropic API base URL — proxy or direct."""
+        if self.proxy.enabled:
+            return f"http://{self.proxy.host}:{self.proxy.port}/v1/"
+        return "https://api.anthropic.com/v1/"
+
+    @property
+    def effective_api_key(self) -> str:
+        """Effective API key — proxy's local key or real Anthropic key."""
+        if self.proxy.enabled:
+            return self.proxy.api_key
+        return self.anthropic_api_key
 
     @classmethod
     def from_dict(cls, d: dict) -> NerveConfig:
@@ -394,6 +434,7 @@ class NerveConfig:
             channels=ChannelsConfig.from_dict(d.get("channels", {})),
             notifications=NotificationsConfig.from_dict(d.get("notifications", {})),
             docker=DockerConfig.from_dict(d.get("docker", {})),
+            proxy=ProxyConfig.from_dict(d.get("proxy", {})),
             anthropic_api_key=d.get("anthropic_api_key", ""),
             openai_api_key=d.get("openai_api_key", ""),
             brave_search_api_key=d.get("brave_search_api_key", ""),

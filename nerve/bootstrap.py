@@ -1505,8 +1505,29 @@ class SetupWizard:
                 if cron.get("reminder_mode"):
                     job["reminder_mode"] = cron["reminder_mode"]
                 jobs.append(job)
-        # Worker mode: no productivity crons — the worker-setup onboarding
-        # session runs from AgentEngine.initialize() on first boot instead.
+        elif self.choices.mode == "worker":
+            # Workers get skill crons — they create skills during onboarding
+            # and those skills should be maintained automatically.
+            # Other crons (task-planner, etc.) can be added during onboarding.
+            _WORKER_CRONS = ("skill-reviser", "skill-extractor", "task-planner")
+            for cron in PRODUCTIVITY_CRONS:
+                if cron["id"] not in _WORKER_CRONS:
+                    continue
+                enabled = cron["id"] in self.choices.enabled_crons
+                job = {
+                    "id": cron["id"],
+                    "schedule": cron["schedule"],
+                    "prompt": cron["prompt"],
+                    "description": cron["description"],
+                    "model": cron.get("model", ""),
+                    "session_mode": cron.get("session_mode", "isolated"),
+                    "enabled": enabled,
+                }
+                if cron.get("context_rotate_hours"):
+                    job["context_rotate_hours"] = cron["context_rotate_hours"]
+                if cron.get("reminder_mode"):
+                    job["reminder_mode"] = cron["reminder_mode"]
+                jobs.append(job)
 
         # Write system crons (managed by nerve init, safe to regenerate)
         system_file = Path("~/.nerve/cron/system.yaml").expanduser()
@@ -1625,7 +1646,8 @@ def run_non_interactive(config_dir: Path) -> SetupChoices:
     # In non-interactive personal mode, enable all productivity crons by default
     if choices.mode == "personal":
         choices.enabled_crons = ["inbox-processor", "task-planner"]
-    # Worker mode: no productivity crons by default
+    elif choices.mode == "worker":
+        choices.enabled_crons = ["skill-reviser", "skill-extractor", "task-planner"]
 
     # Worker task description (setup agent runs on first boot, not during init)
     if choices.mode == "worker":

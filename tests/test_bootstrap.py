@@ -464,7 +464,10 @@ class TestDockerTemplateIntegrity:
 
     def test_compose_bind_mounts(self) -> None:
         """Compose should use host bind-mounts, not named volumes."""
-        content = _build_docker_compose(workspace_path="~/my-workspace")
+        # Mock all optional dirs as existing so they appear in output
+        with patch("nerve.bootstrap.os.path.isdir", return_value=True), \
+             patch("nerve.bootstrap.os.path.expanduser", side_effect=lambda p: p):
+            content = _build_docker_compose(workspace_path="~/my-workspace")
         parsed = yaml.safe_load(content)
         volumes = parsed["services"]["nerve"]["volumes"]
         assert ".:/nerve" in volumes
@@ -476,11 +479,29 @@ class TestDockerTemplateIntegrity:
         # No named volumes section
         assert "volumes" not in parsed or parsed.get("volumes") is None
 
+    def test_compose_skips_missing_auth_dirs(self) -> None:
+        """Optional auth mounts should be excluded when host dirs don't exist."""
+        with patch("nerve.bootstrap.os.path.isdir", return_value=False), \
+             patch("nerve.bootstrap.os.path.expanduser", side_effect=lambda p: p):
+            content = _build_docker_compose(workspace_path="~/ws")
+        parsed = yaml.safe_load(content)
+        volumes = parsed["services"]["nerve"]["volumes"]
+        # Required mounts still present
+        assert ".:/nerve" in volumes
+        assert "~/.nerve:/root/.nerve" in volumes
+        assert "~/ws:/root/nerve-workspace" in volumes
+        # Optional auth mounts absent
+        assert "~/.claude:/root/.claude" not in volumes
+        assert "~/.config/gh:/root/.config/gh" not in volumes
+        assert "~/.config/gog:/root/.config/gog" not in volumes
+
     def test_compose_extra_mounts(self) -> None:
         """Extra mounts should appear in the volumes list."""
-        content = _build_docker_compose(
-            extra_mounts=["~/code:/code", "~/data:/data"],
-        )
+        with patch("nerve.bootstrap.os.path.isdir", return_value=False), \
+             patch("nerve.bootstrap.os.path.expanduser", side_effect=lambda p: p):
+            content = _build_docker_compose(
+                extra_mounts=["~/code:/code", "~/data:/data"],
+            )
         parsed = yaml.safe_load(content)
         volumes = parsed["services"]["nerve"]["volumes"]
         assert "~/code:/code" in volumes

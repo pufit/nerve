@@ -1069,14 +1069,26 @@ def _build_docker_compose(
         workspace_path: Host path for the workspace (e.g. ~/nerve-workspace).
         extra_mounts: Additional host:container mount pairs (e.g. ["~/code:/code"]).
     """
+    # Required mounts (always present)
     volumes = [
         ".:/nerve",
         "~/.nerve:/root/.nerve",
-        "~/.claude:/root/.claude",      # claude CLI auth tokens
-        "~/.config/gh:/root/.config/gh",  # gh CLI auth
-        "~/.config/gog:/root/.config/gog",  # gog CLI auth
         f"{workspace_path}:/root/nerve-workspace",
     ]
+
+    # Optional auth mounts — only include if the host directory exists.
+    # Docker would create missing dirs as root-owned empties, which
+    # confuses the tools and pollutes the host filesystem.
+    _optional_mounts = [
+        ("~/.claude", "/root/.claude", "claude CLI auth"),
+        ("~/.config/gh", "/root/.config/gh", "gh CLI auth"),
+        ("~/.config/gog", "/root/.config/gog", "gog CLI auth"),
+    ]
+    for host_path, container_path, _label in _optional_mounts:
+        expanded = os.path.expanduser(host_path)
+        if os.path.isdir(expanded):
+            volumes.append(f"{host_path}:{container_path}")
+
     if extra_mounts:
         volumes.extend(extra_mounts)
 

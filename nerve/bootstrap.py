@@ -1030,8 +1030,11 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \\
     > /etc/apt/sources.list.d/github-cli.list \\
     && apt-get update && apt-get install -y gh && rm -rf /var/lib/apt/lists/*
 
-# Install gog (Google Workspace CLI)
-RUN pip install --no-cache-dir gog
+# Install gog (Google Workspace CLI) — Go binary from GitHub releases
+RUN GOG_VERSION=0.11.0 \\
+    && ARCH=$(dpkg --print-architecture) \\
+    && curl -fsSL "https://github.com/steipete/gogcli/releases/download/v${GOG_VERSION}/gogcli_${GOG_VERSION}_linux_${ARCH}.tar.gz" \\
+    | tar xz -C /usr/local/bin gog
 
 RUN mkdir -p /root/.nerve /root/nerve-workspace
 

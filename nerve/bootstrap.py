@@ -7,9 +7,12 @@ Ctrl+C at any point leaves the system untouched.
 
 from __future__ import annotations
 
+import json
 import os
 import secrets
 import shutil
+import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -190,8 +193,93 @@ class SetupChoices:
     telegram_sync: bool = False
     telegram_api_id: int = 0
     telegram_api_hash: str = ""
+    # docker credential forwarding
+    claude_oauth_token: str = ""  # OAuth token (from keychain/credentials.json/manual)
+    github_token: str = ""  # GitHub PAT (from gh auth token/env)
     # worker-specific
     task_description: str = ""
+
+
+# --- Credential resolution (tachikoma-style waterfall) ---
+
+
+def _resolve_claude_credential() -> tuple[str, str]:
+    """Resolve Claude credential from host. First match wins.
+
+    Waterfall (matches ClickHouse/tachikoma pattern):
+      1. macOS Keychain ("Claude Code-credentials")
+      2. CLAUDE_CODE_OAUTH_TOKEN env var
+      3. ~/.claude/.credentials.json file
+      4. ANTHROPIC_API_KEY env var
+
+    Returns (token_value, source_label). Empty string if nothing found.
+    """
+    # 1. macOS Keychain
+    if sys.platform == "darwin" and shutil.which("security"):
+        try:
+            result = subprocess.run(
+                ["security", "find-generic-password", "-s", "Claude Code-credentials", "-w"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                data = json.loads(result.stdout.strip())
+                token = data.get("accessToken", "")
+                if token:
+                    return (token, "macOS Keychain")
+        except (json.JSONDecodeError, subprocess.TimeoutExpired, OSError):
+            pass
+
+    # 2. CLAUDE_CODE_OAUTH_TOKEN env var
+    token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "")
+    if token:
+        return (token, "CLAUDE_CODE_OAUTH_TOKEN env var")
+
+    # 3. ~/.claude/.credentials.json file (Linux stores creds here)
+    creds_file = Path("~/.claude/.credentials.json").expanduser()
+    if creds_file.exists():
+        try:
+            data = json.loads(creds_file.read_text(encoding="utf-8"))
+            token = data.get("claudeAiOauth", {}).get("accessToken", "")
+            if token:
+                return (token, "~/.claude/.credentials.json")
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    # 4. ANTHROPIC_API_KEY env var
+    key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if key:
+        return (key, "ANTHROPIC_API_KEY env var")
+
+    return ("", "none")
+
+
+def _resolve_gh_token() -> tuple[str, str]:
+    """Resolve GitHub token from host. First match wins.
+
+    Waterfall:
+      1. gh auth token (CLI)
+      2. GH_TOKEN env var
+
+    Returns (token_value, source_label). Empty string if nothing found.
+    """
+    # 1. gh CLI
+    if shutil.which("gh"):
+        try:
+            result = subprocess.run(
+                ["gh", "auth", "token"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                return (result.stdout.strip(), "gh CLI")
+        except (subprocess.TimeoutExpired, OSError):
+            pass
+
+    # 2. GH_TOKEN env var
+    token = os.environ.get("GH_TOKEN", "")
+    if token:
+        return (token, "GH_TOKEN env var")
+
+    return ("", "none")
 
 
 class SetupWizard:
@@ -216,6 +304,7 @@ class SetupWizard:
         if not self._inside_docker:
             self._step_deployment()
             if self.choices.deployment == "docker":
+                self._step_docker_credentials()
                 self._launch_docker()
                 return self.choices  # Never reached — execvp replaces process
         self._step_mode()
@@ -295,6 +384,92 @@ class SetupWizard:
         click.secho(f"  → {self.choices.deployment} deployment selected.", fg="green")
         click.echo()
 
+    # --- Step: Docker Credentials (host-side only) ---
+
+    def _step_docker_credentials(self) -> None:
+        """Extract Claude and GitHub credentials from host for Docker.
+
+        Runs on the host before launching Docker. Tokens are passed via
+        env vars to `docker compose run` and stored in config.local.yaml
+        by the wizard inside the container.
+
+        Credential resolution follows the tachikoma waterfall pattern:
+        first match wins, each source tried in priority order.
+        """
+        click.clear()
+        click.secho(self._next_step("Docker Credentials"), fg="cyan", bold=True)
+        click.echo()
+        click.secho(
+            "Docker containers can't access your macOS Keychain, so\n"
+            "Nerve extracts credentials from your current logins.",
+            dim=True,
+        )
+        click.echo()
+
+        # --- Claude credential ---
+        click.secho("  Claude:", bold=True)
+        claude_token, claude_source = _resolve_claude_credential()
+
+        if claude_token:
+            # Distinguish OAuth tokens from API keys for storage
+            is_api_key = claude_source == "ANTHROPIC_API_KEY env var"
+            if is_api_key:
+                click.secho(f"    ✓ Found API key (source: {claude_source})", fg="green")
+                self.choices.anthropic_api_key = claude_token
+            else:
+                click.secho(f"    ✓ Found OAuth token (source: {claude_source})", fg="green")
+                self.choices.claude_oauth_token = claude_token
+        else:
+            click.secho("    ✗ No credentials found automatically.", fg="yellow")
+            click.echo()
+            click.secho("    1) Anthropic API key (sk-ant-...)", dim=True)
+            click.secho("    2) Paste OAuth token (run `claude setup-token`)", dim=True)
+            click.secho("    3) Skip — configure later in config.local.yaml", dim=True)
+            click.echo()
+            choice = click.prompt(
+                "    Choose",
+                type=click.Choice(["1", "2", "3"]),
+                default="3",
+            )
+            if choice == "1":
+                while True:
+                    key = click.prompt("    Anthropic API key", hide_input=True)
+                    if key.startswith("sk-ant-"):
+                        self.choices.anthropic_api_key = key
+                        click.secho("    ✓ API key saved", fg="green")
+                        break
+                    click.secho("    Invalid key — should start with 'sk-ant-'.", fg="yellow")
+            elif choice == "2":
+                click.echo()
+                click.secho(
+                    "    Run this in another terminal:\n"
+                    "      claude setup-token\n\n"
+                    "    Then paste the token below.",
+                    dim=True,
+                )
+                click.echo()
+                token = click.prompt("    OAuth token", hide_input=True)
+                if token.strip():
+                    self.choices.claude_oauth_token = token.strip()
+                    click.secho("    ✓ OAuth token saved", fg="green")
+            else:
+                click.secho("    → Skipping — set anthropic_api_key in config.local.yaml later.", dim=True)
+
+        click.echo()
+
+        # --- GitHub credential ---
+        click.secho("  GitHub:", bold=True)
+        gh_token, gh_source = _resolve_gh_token()
+
+        if gh_token:
+            click.secho(f"    ✓ Found token (source: {gh_source})", fg="green")
+            self.choices.github_token = gh_token
+        else:
+            click.secho("    — Not found (gh CLI not installed or not authenticated)", dim=True)
+            click.secho("    → GitHub sync will be configured inside Docker.", dim=True)
+
+        click.echo()
+
     # --- Docker orchestration ---
 
     def _launch_docker(self) -> None:
@@ -347,16 +522,24 @@ class SetupWizard:
             raise SystemExit(1)
         click.secho(" ✓", fg="green")
 
-        # Run the wizard inside the container (interactive)
+        # Run the wizard inside the container (interactive).
+        # Pass extracted credentials via env vars so the wizard inside
+        # Docker can detect and store them without re-prompting.
         click.echo("  Starting container...\n")
-        os.execvp("docker", [
+        cmd = [
             "docker", "compose",
             "-f", str(self.config_dir / "docker-compose.yml"),
             "run", "--rm",
             "--service-ports",
-            "nerve",
-            "nerve", "init", "--inside-docker",
-        ])
+        ]
+        if self.choices.claude_oauth_token:
+            cmd.extend(["-e", f"CLAUDE_CODE_OAUTH_TOKEN={self.choices.claude_oauth_token}"])
+        elif self.choices.anthropic_api_key:
+            cmd.extend(["-e", f"ANTHROPIC_API_KEY={self.choices.anthropic_api_key}"])
+        if self.choices.github_token:
+            cmd.extend(["-e", f"GH_TOKEN={self.choices.github_token}"])
+        cmd.extend(["nerve", "nerve", "init", "--inside-docker"])
+        os.execvp("docker", cmd)
         # execvp replaces this process — we never return here
 
     def _ensure_docker_files(self) -> None:
@@ -422,7 +605,50 @@ class SetupWizard:
 
     # --- Step: API Keys ---
 
+    def _prompt_openai_key(self) -> None:
+        """Prompt for optional OpenAI API key (used by both auth paths)."""
+        click.echo()
+        click.secho(
+            "Optionally, an OpenAI key enables better memory search\n"
+            "(text-embedding-3-small for vector embeddings). Nerve works\n"
+            "without it but recall quality improves significantly.",
+            dim=True,
+        )
+        click.echo()
+        openai_key = click.prompt("OpenAI API key (Enter to skip)", default="", hide_input=True)
+        if openai_key:
+            self.choices.openai_api_key = openai_key
+
+        click.echo()
+        click.secho("  ✓ API configuration complete", fg="green")
+        click.echo()
+
     def _step_api_keys(self) -> None:
+        # Check for tokens pre-extracted on the host (Docker credential flow).
+        # When `_step_docker_credentials()` runs on the host and passes tokens
+        # via env vars to `docker compose run`, the wizard inside Docker picks
+        # them up here and skips the manual prompt.
+        claude_token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "")
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        gh_token = os.environ.get("GH_TOKEN", "")
+
+        if claude_token or api_key:
+            click.clear()
+            click.secho(self._next_step("API Configuration"), fg="cyan", bold=True)
+            click.echo()
+            if claude_token:
+                self.choices.claude_oauth_token = claude_token
+                click.secho("  ✓ Using Claude OAuth token from host", fg="green")
+            elif api_key:
+                self.choices.anthropic_api_key = api_key
+                click.secho("  ✓ Using Anthropic API key from host", fg="green")
+            if gh_token:
+                self.choices.github_token = gh_token
+                click.secho("  ✓ Using GitHub token from host", fg="green")
+            self._prompt_openai_key()
+            return
+
+        # Normal flow — no pre-extracted tokens
         click.clear()
         click.secho(self._next_step("API Configuration"), fg="cyan", bold=True)
         click.echo()
@@ -443,22 +669,7 @@ class SetupWizard:
         else:
             self._step_api_key_direct()
 
-        # OpenAI key (optional, for embeddings — applies to both modes)
-        click.echo()
-        click.secho(
-            "Optionally, an OpenAI key enables better memory search\n"
-            "(text-embedding-3-small for vector embeddings). Nerve works\n"
-            "without it but recall quality improves significantly.",
-            dim=True,
-        )
-        click.echo()
-        openai_key = click.prompt("OpenAI API key (Enter to skip)", default="", hide_input=True)
-        if openai_key:
-            self.choices.openai_api_key = openai_key
-
-        click.echo()
-        click.secho("  ✓ API configuration complete", fg="green")
-        click.echo()
+        self._prompt_openai_key()
 
     def _step_api_key_direct(self) -> None:
         """Prompt for a direct Anthropic API key."""
@@ -883,10 +1094,14 @@ class SetupWizard:
         click.echo()
 
         ws = str(self.choices.workspace_path)
-        if self.choices.use_proxy:
+        if self.choices.claude_oauth_token:
+            api_status = "OAuth ✓"
+        elif self.choices.use_proxy:
             api_status = "Proxy ✓"
+        elif self.choices.anthropic_api_key:
+            api_status = "API key ✓"
         else:
-            api_status = "Anthropic ✓"
+            api_status = "—"
         if self.choices.openai_api_key:
             api_status += "  OpenAI ✓"
         else:
@@ -1149,6 +1364,12 @@ class SetupWizard:
         if self.choices.anthropic_api_key:
             local["anthropic_api_key"] = self.choices.anthropic_api_key
 
+        if self.choices.claude_oauth_token:
+            local["claude_oauth_token"] = self.choices.claude_oauth_token
+
+        if self.choices.github_token:
+            local["github_token"] = self.choices.github_token
+
         if self.choices.openai_api_key:
             local["openai_api_key"] = self.choices.openai_api_key
 
@@ -1284,21 +1505,29 @@ def run_non_interactive(config_dir: Path) -> SetupChoices:
     """Non-interactive setup using environment variables. For Docker."""
     choices = SetupChoices()
 
-    # API auth: either API key or proxy mode
+    # API auth: OAuth token, API key, or proxy mode.
+    # Follows tachikoma-style waterfall — first match wins.
     use_proxy = os.environ.get("NERVE_USE_PROXY", "") == "1"
     choices.use_proxy = use_proxy
 
-    if use_proxy:
-        # Proxy mode — API key not required.
-        choices.anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    else:
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-        if not api_key:
-            raise click.ClickException(
-                "ANTHROPIC_API_KEY environment variable is required for non-interactive setup "
-                "(or set NERVE_USE_PROXY=1 to use CLIProxyAPI instead)"
-            )
+    claude_oauth_token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "")
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+
+    if claude_oauth_token:
+        choices.claude_oauth_token = claude_oauth_token
+    if api_key:
         choices.anthropic_api_key = api_key
+
+    if not use_proxy and not api_key and not claude_oauth_token:
+        raise click.ClickException(
+            "ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN environment variable is required "
+            "for non-interactive setup (or set NERVE_USE_PROXY=1 to use CLIProxyAPI instead)"
+        )
+
+    # GitHub token (from host extraction or env var)
+    gh_token = os.environ.get("GH_TOKEN", "")
+    if gh_token:
+        choices.github_token = gh_token
 
     # Auto-detect Docker via env var
     is_docker = os.environ.get("NERVE_DOCKER", "") == "1"
@@ -1495,12 +1724,27 @@ if [ ! -d "web/dist" ]; then
     cd web && npm ci --quiet && npm run build && cd ..
 fi
 
-# Export API keys from config.local.yaml so the claude CLI (Agent SDK)
-# can authenticate without OAuth. macOS stores OAuth tokens in the
-# system Keychain which Docker can't access.
+# --- Credential resolution (tachikoma-style waterfall) ---
+# Export credentials from config.local.yaml so tools (claude CLI, gh CLI)
+# can authenticate inside Docker. macOS stores tokens in the Keychain
+# which Docker can't access — the bootstrap wizard extracts them during
+# `nerve init` and stores them here.
+
+# Claude: prefer OAuth token, fall back to API key
+if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ] && [ -f config.local.yaml ]; then
+    _token=$(python3 -c "import yaml; print(yaml.safe_load(open('config.local.yaml')).get('claude_oauth_token',''))" 2>/dev/null)
+    [ -n "$_token" ] && export CLAUDE_CODE_OAUTH_TOKEN="$_token"
+fi
+
 if [ -z "$ANTHROPIC_API_KEY" ] && [ -f config.local.yaml ]; then
     _key=$(python3 -c "import yaml; print(yaml.safe_load(open('config.local.yaml')).get('anthropic_api_key',''))" 2>/dev/null)
     [ -n "$_key" ] && export ANTHROPIC_API_KEY="$_key"
+fi
+
+# GitHub CLI auth
+if [ -z "$GH_TOKEN" ] && [ -f config.local.yaml ]; then
+    _gh=$(python3 -c "import yaml; print(yaml.safe_load(open('config.local.yaml')).get('github_token',''))" 2>/dev/null)
+    [ -n "$_gh" ] && export GH_TOKEN="$_gh"
 fi
 
 # If no arguments, default to init + start

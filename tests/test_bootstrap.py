@@ -16,6 +16,8 @@ from nerve.bootstrap import (
     SetupChoices,
     is_fresh_install,
     run_non_interactive,
+    _resolve_claude_credential,
+    _resolve_gh_token,
     _DOCKERFILE_TEMPLATE,
     _build_docker_compose,
     _DOCKER_ENTRYPOINT_TEMPLATE,
@@ -512,5 +514,170 @@ class TestDockerTemplateIntegrity:
         """Entrypoint should start with bash shebang."""
         assert _DOCKER_ENTRYPOINT_TEMPLATE.strip().startswith("#!/bin/bash")
 
+    def test_entrypoint_exports_oauth_token(self) -> None:
+        """Entrypoint should export CLAUDE_CODE_OAUTH_TOKEN from config."""
+        assert "CLAUDE_CODE_OAUTH_TOKEN" in _DOCKER_ENTRYPOINT_TEMPLATE
+        assert "claude_oauth_token" in _DOCKER_ENTRYPOINT_TEMPLATE
+
+    def test_entrypoint_exports_gh_token(self) -> None:
+        """Entrypoint should export GH_TOKEN from config."""
+        assert "GH_TOKEN" in _DOCKER_ENTRYPOINT_TEMPLATE
+        assert "github_token" in _DOCKER_ENTRYPOINT_TEMPLATE
+
+    def test_entrypoint_exports_api_key(self) -> None:
+        """Entrypoint should still export ANTHROPIC_API_KEY as fallback."""
+        assert "ANTHROPIC_API_KEY" in _DOCKER_ENTRYPOINT_TEMPLATE
+        assert "anthropic_api_key" in _DOCKER_ENTRYPOINT_TEMPLATE
+
     def test_dockerignore_not_empty(self) -> None:
         assert len(_DOCKERIGNORE_TEMPLATE.strip()) > 50
+
+
+class TestCredentialWaterfall:
+    """Test tachikoma-style credential resolution functions."""
+
+    def test_resolve_claude_from_oauth_env(self) -> None:
+        """CLAUDE_CODE_OAUTH_TOKEN env var should be picked up."""
+        with patch.dict(os.environ, {"CLAUDE_CODE_OAUTH_TOKEN": "sk-ant-oat01-test"}, clear=False):
+            token, source = _resolve_claude_credential()
+        assert token == "sk-ant-oat01-test"
+        assert source == "CLAUDE_CODE_OAUTH_TOKEN env var"
+
+    def test_resolve_claude_from_api_key_env(self) -> None:
+        """ANTHROPIC_API_KEY should be last resort in waterfall."""
+        env = {"ANTHROPIC_API_KEY": "sk-ant-api03-test"}
+        # Clear OAuth token to ensure it doesn't interfere
+        with patch.dict(os.environ, env, clear=False):
+            # Remove CLAUDE_CODE_OAUTH_TOKEN if set
+            os.environ.pop("CLAUDE_CODE_OAUTH_TOKEN", None)
+            token, source = _resolve_claude_credential()
+        assert token == "sk-ant-api03-test"
+        assert source == "ANTHROPIC_API_KEY env var"
+
+    def test_resolve_claude_from_credentials_file(self, tmp_path: Path) -> None:
+        """Should read from ~/.claude/.credentials.json on Linux."""
+        creds_file = tmp_path / ".credentials.json"
+        creds_file.write_text('{"claudeAiOauth": {"accessToken": "sk-ant-oat01-file"}}')
+
+        with patch.dict(os.environ, {}, clear=False), \
+             patch("nerve.bootstrap.Path.expanduser", return_value=creds_file), \
+             patch("nerve.bootstrap.sys.platform", "linux"):
+            os.environ.pop("CLAUDE_CODE_OAUTH_TOKEN", None)
+            os.environ.pop("ANTHROPIC_API_KEY", None)
+            token, source = _resolve_claude_credential()
+        assert token == "sk-ant-oat01-file"
+        assert "credentials.json" in source
+
+    def test_resolve_claude_none(self) -> None:
+        """Should return empty when no credentials found."""
+        with patch.dict(os.environ, {}, clear=True), \
+             patch("nerve.bootstrap.sys.platform", "linux"):
+            token, source = _resolve_claude_credential()
+        assert token == ""
+        assert source == "none"
+
+    def test_resolve_claude_oauth_takes_priority(self) -> None:
+        """OAuth token should win over API key."""
+        env = {
+            "CLAUDE_CODE_OAUTH_TOKEN": "oauth-token",
+            "ANTHROPIC_API_KEY": "api-key",
+        }
+        with patch.dict(os.environ, env, clear=False):
+            token, source = _resolve_claude_credential()
+        assert token == "oauth-token"
+        assert "CLAUDE_CODE_OAUTH_TOKEN" in source
+
+    def test_resolve_gh_from_env(self) -> None:
+        """GH_TOKEN env var should be picked up."""
+        with patch.dict(os.environ, {"GH_TOKEN": "ghp_test123"}, clear=False), \
+             patch("nerve.bootstrap.shutil.which", return_value=None):
+            token, source = _resolve_gh_token()
+        assert token == "ghp_test123"
+        assert source == "GH_TOKEN env var"
+
+    def test_resolve_gh_none(self) -> None:
+        """Should return empty when no gh credentials found."""
+        with patch.dict(os.environ, {}, clear=True), \
+             patch("nerve.bootstrap.shutil.which", return_value=None):
+            token, source = _resolve_gh_token()
+        assert token == ""
+        assert source == "none"
+
+
+class TestOAuthNonInteractive:
+    """Test non-interactive setup with OAuth tokens."""
+
+    def test_oauth_token_accepted_without_api_key(self, tmp_path: Path) -> None:
+        """CLAUDE_CODE_OAUTH_TOKEN alone should be sufficient."""
+        env = {
+            "CLAUDE_CODE_OAUTH_TOKEN": "sk-ant-oat01-docker-test",
+            "NERVE_MODE": "personal",
+            "NERVE_WORKSPACE": str(tmp_path / "ws"),
+        }
+        # Ensure ANTHROPIC_API_KEY is not set
+        with patch.dict(os.environ, env, clear=False):
+            os.environ.pop("ANTHROPIC_API_KEY", None)
+            os.environ.pop("NERVE_USE_PROXY", None)
+            choices = run_non_interactive(tmp_path)
+
+        assert choices.claude_oauth_token == "sk-ant-oat01-docker-test"
+        assert choices.anthropic_api_key == ""  # Not needed
+
+        # Verify it's written to config.local.yaml
+        local = yaml.safe_load((tmp_path / "config.local.yaml").read_text())
+        assert local["claude_oauth_token"] == "sk-ant-oat01-docker-test"
+
+    def test_gh_token_stored(self, tmp_path: Path) -> None:
+        """GH_TOKEN should be written to config.local.yaml."""
+        env = {
+            "ANTHROPIC_API_KEY": "sk-ant-api03-test",
+            "GH_TOKEN": "ghp_testtoken123",
+            "NERVE_MODE": "personal",
+            "NERVE_WORKSPACE": str(tmp_path / "ws"),
+        }
+        with patch.dict(os.environ, env, clear=False):
+            choices = run_non_interactive(tmp_path)
+
+        assert choices.github_token == "ghp_testtoken123"
+
+        local = yaml.safe_load((tmp_path / "config.local.yaml").read_text())
+        assert local["github_token"] == "ghp_testtoken123"
+
+    def test_oauth_token_in_config_local(self, tmp_path: Path) -> None:
+        """OAuth token should appear in config.local.yaml via _apply()."""
+        wizard = SetupWizard(tmp_path)
+        wizard.choices.claude_oauth_token = "sk-ant-oat01-test"
+        wizard.choices.github_token = "ghp_test"
+        wizard.choices.workspace_path = tmp_path / "workspace"
+        wizard.choices.mode = "personal"
+
+        wizard._apply()
+
+        local = yaml.safe_load((tmp_path / "config.local.yaml").read_text())
+        assert local["claude_oauth_token"] == "sk-ant-oat01-test"
+        assert local["github_token"] == "ghp_test"
+        # API key should NOT be present (wasn't set)
+        assert "anthropic_api_key" not in local
+
+    def test_both_oauth_and_api_key(self, tmp_path: Path) -> None:
+        """Both OAuth and API key can coexist."""
+        wizard = SetupWizard(tmp_path)
+        wizard.choices.claude_oauth_token = "oauth-token"
+        wizard.choices.anthropic_api_key = "sk-ant-api03-key"
+        wizard.choices.workspace_path = tmp_path / "workspace"
+        wizard.choices.mode = "personal"
+
+        wizard._apply()
+
+        local = yaml.safe_load((tmp_path / "config.local.yaml").read_text())
+        assert local["claude_oauth_token"] == "oauth-token"
+        assert local["anthropic_api_key"] == "sk-ant-api03-key"
+
+
+class TestSetupChoicesNewFields:
+    """Verify new credential fields have correct defaults."""
+
+    def test_defaults(self) -> None:
+        c = SetupChoices()
+        assert c.claude_oauth_token == ""
+        assert c.github_token == ""

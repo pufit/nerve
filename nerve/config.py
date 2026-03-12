@@ -64,7 +64,7 @@ class GatewayConfig:
 class AgentConfig:
     model: str = "claude-opus-4-6"
     cron_model: str = "claude-sonnet-4-6"
-    max_turns: int = 50
+    max_turns: int = 100
     max_concurrent: int = 4
     thinking: str = "max"       # max, high, medium, low, disabled, adaptive, or number (budget_tokens)
     effort: str = "max"         # max, high, medium, low
@@ -75,7 +75,7 @@ class AgentConfig:
         return cls(
             model=d.get("model", "claude-opus-4-6"),
             cron_model=d.get("cron_model", "claude-sonnet-4-6"),
-            max_turns=d.get("max_turns", 50),
+            max_turns=d.get("max_turns", 100),
             max_concurrent=d.get("max_concurrent", 4),
             thinking=str(d.get("thinking", "max")),
             effort=str(d.get("effort", "max")),

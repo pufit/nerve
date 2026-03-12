@@ -979,6 +979,63 @@ class SetupWizard:
         self._write_cron_jobs()
         click.secho(" ✓", fg="green")
 
+        # 8. Build web UI (server mode only — Docker handles this in entrypoint)
+        if not self._inside_docker:
+            self._build_web_ui()
+
+    def _build_web_ui(self) -> None:
+        """Build the web UI if not already built."""
+        import subprocess
+
+        web_dir = self.config_dir / "web"
+        dist_dir = web_dir / "dist"
+
+        if not web_dir.exists():
+            # Not in the source tree (e.g. pip-installed) — skip
+            return
+
+        if dist_dir.exists():
+            click.echo("  Web UI already built — skipping")
+            return
+
+        if not shutil.which("node"):
+            click.secho(
+                "  ⚠ Node.js not found — web UI not built.\n"
+                "    Install Node.js 18+ and run: cd web && npm ci && npm run build",
+                fg="yellow",
+            )
+            return
+
+        click.echo("  Building web UI...", nl=False)
+        try:
+            # Install dependencies
+            subprocess.run(
+                ["npm", "ci", "--quiet"],
+                cwd=str(web_dir),
+                capture_output=True,
+                check=True,
+            )
+            # Build
+            subprocess.run(
+                ["npm", "run", "build"],
+                cwd=str(web_dir),
+                capture_output=True,
+                check=True,
+            )
+            click.secho(" ✓", fg="green")
+        except subprocess.CalledProcessError as e:
+            click.secho(" ✗", fg="red")
+            stderr = e.stderr.decode() if e.stderr else ""
+            if stderr:
+                # Show last few lines of error
+                lines = stderr.strip().splitlines()[-5:]
+                for line in lines:
+                    click.secho(f"    {line}", dim=True)
+            click.secho(
+                "    You can build manually: cd web && npm ci && npm run build",
+                fg="yellow",
+            )
+
     def _write_config_yaml(self) -> None:
         """Write the base config.yaml."""
         ws = str(self.choices.workspace_path)

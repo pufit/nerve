@@ -13,7 +13,7 @@ Cron (every 4h) → persistent "task-planner" job
   → calls plan_propose(task_id, content) to store the proposal
   → plan appears in /plans UI for review
 
-User reviews in /plans UI
+User reviews (via /plans UI or chat tools)
   → approve → spawns implementation session (visible in Chat)
   → decline → marks plan declined
   → request revision → sends feedback to same persistent planner session
@@ -25,11 +25,15 @@ User reviews in /plans UI
 |------|-------------|
 | `plan_propose` | Propose an implementation plan for a task. Stored for async human review. |
 | `plan_list` | List existing plans. Used to check which tasks already have pending plans. |
+| `plan_approve` | Approve a pending plan and spawn an implementation session. |
+| `plan_decline` | Decline a pending plan with optional feedback. |
+| `plan_revise` | Request revision of a pending plan — sends feedback to the planner session. |
 
-### `plan_propose(task_id, content)`
+### `plan_propose(task_id, content, plan_type?)`
 
 - Validates the task exists
 - Checks no pending/implementing plan already exists → returns error if duplicate
+- Auto-detects `plan_type` from task source (`skill-extractor` → `skill-create`, etc.)
 - Auto-increments version if previous plans exist for the same task
 - Supersedes any prior pending plan for the same task
 - Returns `{ plan_id, task_id, version }`
@@ -38,6 +42,33 @@ User reviews in /plans UI
 
 - Default: returns pending + implementing plans
 - Supports filtering: `pending`, `approved`, `declined`, `implementing`, `superseded`
+
+### `plan_approve(plan_id)`
+
+- Guards: only pending plans can be approved
+- Marks plan as `implementing` (prevents double-approve)
+- Creates implementation session (`impl-{uuid}`) with full tool access
+- Updates task status to `in_progress`
+- Builds skill-aware prompt (skill plans use `skill_create`/`skill_update` tools)
+- Spawns `engine.run()` in background
+- Returns `{ plan_id, impl_session_id }`
+
+### `plan_decline(plan_id, feedback?)`
+
+- Guards: only pending plans can be declined
+- Sets status to `declined` with timestamp
+- Stores optional feedback on the plan
+- Writes decline note to task history
+- Returns confirmation
+
+### `plan_revise(plan_id, feedback)`
+
+- Guards: only pending plans can be revised; feedback is required
+- Stores feedback on the plan record
+- Writes revision note to task history
+- Sends feedback as a message to the persistent `cron:task-planner` session
+- Planner agent sees prior context + feedback, proposes revised plan via `plan_propose`
+- Previous pending plan is automatically superseded when new version is proposed
 
 ## Plan Statuses
 

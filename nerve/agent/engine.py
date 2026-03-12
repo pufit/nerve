@@ -114,6 +114,7 @@ class AgentEngine:
             memory_bridge=self._memory_bridge,
             config=self.config,
             skill_manager=self._skill_manager,
+            engine=self,
         )
 
         # Wire up memorize callback so SessionManager can trigger memU indexing
@@ -807,6 +808,77 @@ class AgentEngine:
         return session
 
     # ------------------------------------------------------------------ #
+    #  Tool-result helpers                                                 #
+    # ------------------------------------------------------------------ #
+
+    async def _process_tool_result(
+        self,
+        block: ToolResultBlock,
+        session_id: str,
+        parent_tool_use_id: str | None,
+        tool_results_map: dict[str, dict],
+        ordered_blocks: list[dict],
+        tool_calls_log: list[dict],
+        active_subagents: dict[str, float],
+    ) -> None:
+        """Process a single ToolResultBlock (shared by AssistantMessage and UserMessage paths)."""
+        result_content = (
+            block.content
+            if isinstance(block.content, str)
+            else json.dumps(block.content, default=str)
+        )
+        tool_use_id = getattr(block, "tool_use_id", None)
+        is_error = getattr(block, "is_error", False)
+
+        tool_results_map[tool_use_id] = {
+            "result": result_content,
+            "is_error": is_error,
+        }
+
+        # Update matching tool_call in ordered_blocks
+        if tool_use_id:
+            for ob in reversed(ordered_blocks):
+                if ob.get("type") == "tool_call" and ob.get("tool_use_id") == tool_use_id:
+                    ob["result"] = result_content
+                    ob["is_error"] = is_error
+                    break
+
+        await broadcaster.broadcast_tool_result(
+            session_id, result_content,
+            tool_use_id=tool_use_id,
+            is_error=is_error or False,
+            parent_tool_use_id=parent_tool_use_id,
+        )
+
+        # Sub-agent lifecycle: emit complete event
+        if tool_use_id and tool_use_id in active_subagents:
+            start_time = active_subagents.pop(tool_use_id)
+            duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
+            await broadcaster.broadcast_subagent_complete(
+                session_id,
+                tool_use_id=tool_use_id,
+                duration_ms=duration_ms,
+                is_error=is_error or False,
+            )
+
+        # Auto-broadcast plan/file updates
+        if not is_error and tool_use_id:
+            _maybe_broadcast_plan_update(session_id, tool_use_id, tool_calls_log)
+            _maybe_broadcast_file_changed(session_id, tool_use_id, tool_calls_log)
+
+    @staticmethod
+    def _merge_tool_results(
+        tool_calls_log: list[dict],
+        tool_results_map: dict[str, dict],
+    ) -> None:
+        """Merge collected tool results back into tool_calls_log entries."""
+        for tc in tool_calls_log:
+            tid = tc.get("tool_use_id")
+            if tid and tid in tool_results_map:
+                tc["result"] = tool_results_map[tid]["result"]
+                tc["is_error"] = tool_results_map[tid]["is_error"]
+
+    # ------------------------------------------------------------------ #
     #  Run agent                                                           #
     # ------------------------------------------------------------------ #
 
@@ -933,11 +1005,7 @@ class AgentEngine:
                         elif ThinkingBlock is not None and isinstance(
                             block, ThinkingBlock,
                         ):
-                            thinking = (
-                                block.thinking
-                                if hasattr(block, 'thinking')
-                                else str(block)
-                            )
+                            thinking = getattr(block, "thinking", None) or str(block)
                             thinking_text += thinking
                             # Track ordered blocks for DB persistence
                             if ordered_blocks and ordered_blocks[-1].get("type") == "thinking":
@@ -950,19 +1018,9 @@ class AgentEngine:
                             )
 
                         elif isinstance(block, ToolUseBlock):
-                            tool_input = (
-                                block.input
-                                if hasattr(block, 'input')
-                                else {}
-                            )
-                            tool_name = (
-                                block.name
-                                if hasattr(block, 'name')
-                                else str(block)
-                            )
-                            tool_use_id = (
-                                block.id if hasattr(block, 'id') else None
-                            )
+                            tool_input = getattr(block, "input", {})
+                            tool_name = getattr(block, "name", None) or str(block)
+                            tool_use_id = getattr(block, "id", None)
                             await broadcaster.broadcast_tool_use(
                                 session_id, tool_name, tool_input,
                                 tool_use_id=tool_use_id,
@@ -991,111 +1049,23 @@ class AgentEngine:
                             })
 
                         elif isinstance(block, ToolResultBlock):
-                            result_content = (
-                                block.content
-                                if isinstance(block.content, str)
-                                else json.dumps(block.content, default=str)
+                            await self._process_tool_result(
+                                block, session_id, parent_id,
+                                tool_results_map, ordered_blocks,
+                                tool_calls_log, active_subagents,
                             )
-                            tool_use_id = (
-                                block.tool_use_id
-                                if hasattr(block, 'tool_use_id')
-                                else None
-                            )
-                            is_error = (
-                                block.is_error
-                                if hasattr(block, 'is_error')
-                                else False
-                            )
-                            tool_results_map[tool_use_id] = {
-                                "result": result_content,
-                                "is_error": is_error,
-                            }
-                            # Update matching tool_call in ordered_blocks
-                            if tool_use_id:
-                                for ob in reversed(ordered_blocks):
-                                    if ob.get("type") == "tool_call" and ob.get("tool_use_id") == tool_use_id:
-                                        ob["result"] = result_content
-                                        ob["is_error"] = is_error
-                                        break
-                            await broadcaster.broadcast_tool_result(
-                                session_id, result_content,
-                                tool_use_id=tool_use_id,
-                                is_error=is_error or False,
-                                parent_tool_use_id=parent_id,
-                            )
-                            # Sub-agent lifecycle: emit complete event
-                            if tool_use_id and tool_use_id in active_subagents:
-                                start_time = active_subagents.pop(tool_use_id)
-                                duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
-                                await broadcaster.broadcast_subagent_complete(
-                                    session_id,
-                                    tool_use_id=tool_use_id,
-                                    duration_ms=duration_ms,
-                                    is_error=is_error or False,
-                                )
-                            # Auto-broadcast plan updates when Write/Edit targets a plan file
-                            if not is_error and tool_use_id:
-                                _maybe_broadcast_plan_update(session_id, tool_use_id, tool_calls_log)
-                                _maybe_broadcast_file_changed(session_id, tool_use_id, tool_calls_log)
 
                 elif isinstance(message, UserMessage):
                     parent_id = getattr(message, 'parent_tool_use_id', None)
-                    content = (
-                        message.content
-                        if hasattr(message, 'content')
-                        else []
-                    )
+                    content = getattr(message, "content", [])
                     if isinstance(content, list):
                         for block in content:
                             if isinstance(block, ToolResultBlock):
-                                result_content = (
-                                    block.content
-                                    if isinstance(block.content, str)
-                                    else json.dumps(
-                                        block.content, default=str,
-                                    )
+                                await self._process_tool_result(
+                                    block, session_id, parent_id,
+                                    tool_results_map, ordered_blocks,
+                                    tool_calls_log, active_subagents,
                                 )
-                                tool_use_id = (
-                                    block.tool_use_id
-                                    if hasattr(block, 'tool_use_id')
-                                    else None
-                                )
-                                is_error = (
-                                    block.is_error
-                                    if hasattr(block, 'is_error')
-                                    else False
-                                )
-                                tool_results_map[tool_use_id] = {
-                                    "result": result_content,
-                                    "is_error": is_error,
-                                }
-                                # Update matching tool_call in ordered_blocks
-                                if tool_use_id:
-                                    for ob in reversed(ordered_blocks):
-                                        if ob.get("type") == "tool_call" and ob.get("tool_use_id") == tool_use_id:
-                                            ob["result"] = result_content
-                                            ob["is_error"] = is_error
-                                            break
-                                await broadcaster.broadcast_tool_result(
-                                    session_id, result_content,
-                                    tool_use_id=tool_use_id,
-                                    is_error=is_error or False,
-                                    parent_tool_use_id=parent_id,
-                                )
-                                # Sub-agent lifecycle: emit complete event
-                                if tool_use_id and tool_use_id in active_subagents:
-                                    start_time = active_subagents.pop(tool_use_id)
-                                    duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
-                                    await broadcaster.broadcast_subagent_complete(
-                                        session_id,
-                                        tool_use_id=tool_use_id,
-                                        duration_ms=duration_ms,
-                                        is_error=is_error or False,
-                                    )
-                                # Auto-broadcast plan updates when Write/Edit targets a plan file
-                                if not is_error and tool_use_id:
-                                    _maybe_broadcast_plan_update(session_id, tool_use_id, tool_calls_log)
-                                    _maybe_broadcast_file_changed(session_id, tool_use_id, tool_calls_log)
 
                 elif isinstance(message, ResultMessage):
                     if message.usage:
@@ -1110,11 +1080,7 @@ class AgentEngine:
                 else "[Stopped by user]"
             )
             # Merge available tool results
-            for tc in tool_calls_log:
-                tid = tc.get("tool_use_id")
-                if tid and tid in tool_results_map:
-                    tc["result"] = tool_results_map[tid]["result"]
-                    tc["is_error"] = tool_results_map[tid]["is_error"]
+            self._merge_tool_results(tool_calls_log, tool_results_map)
             await self.sessions.add_message(
                 session_id, "assistant", partial,
                 channel=channel,
@@ -1143,16 +1109,14 @@ class AgentEngine:
             await self._memorize_session(session_id)
             # Clear resume — CLI state may be corrupted after error
             unregister_handler(session_id)
-            self.sessions.remove_client(session_id)
+            client = self.sessions.remove_client(session_id)
             await self.sessions.mark_error(session_id, str(e))
+            if client:
+                await self._safe_disconnect(client)
             full_response_text = error_msg
 
         # Merge tool results into tool_calls_log
-        for tc in tool_calls_log:
-            tid = tc.get("tool_use_id")
-            if tid and tid in tool_results_map:
-                tc["result"] = tool_results_map[tid]["result"]
-                tc["is_error"] = tool_results_map[tid]["is_error"]
+        self._merge_tool_results(tool_calls_log, tool_results_map)
 
         # Store assistant message in DB
         await self.sessions.add_message(

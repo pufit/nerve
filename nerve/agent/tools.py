@@ -23,6 +23,7 @@ _db = None  # nerve.db.Database instance
 _memory_bridge = None  # nerve.memory.memu_bridge instance
 _config = None  # nerve.config.NerveConfig instance
 _skill_manager = None  # nerve.skills.manager.SkillManager instance
+_engine = None  # nerve.agent.engine.AgentEngine instance
 _notification_service = None  # nerve.notifications.service.NotificationService instance
 
 # Session context — DEPRECATED. Previously a module-level global set by engine
@@ -37,14 +38,15 @@ _current_session_id: str = "unknown"
 _tasks_read: set[str] = set()
 
 
-def init_tools(workspace: Path, db: Any, memory_bridge: Any = None, config: Any = None, skill_manager: Any = None) -> None:
+def init_tools(workspace: Path, db: Any, memory_bridge: Any = None, config: Any = None, skill_manager: Any = None, engine: Any = None) -> None:
     """Initialize tool dependencies."""
-    global _workspace, _db, _memory_bridge, _config, _skill_manager
+    global _workspace, _db, _memory_bridge, _config, _skill_manager, _engine
     _workspace = workspace
     _db = db
     _memory_bridge = memory_bridge
     _config = config
     _skill_manager = skill_manager
+    _engine = engine
 
 
 def _make_task_id(title: str) -> str:
@@ -1081,6 +1083,224 @@ async def plan_list(args: dict) -> dict:
         lines.append(f"- [{p['status']}] {task_title} — plan {p['id']} v{p['version']} ({p['created_at'][:10]})")
 
     return {"content": [{"type": "text", "text": f"Found {len(plans)} plan(s):\n" + "\n".join(lines)}]}
+
+
+@tool(
+    "plan_approve",
+    "Approve a pending plan and spawn an implementation session. Use when the user approves a proposed plan.",
+    {
+        "plan_id": {"type": "string", "description": "The plan ID to approve (e.g. plan-abc12345)"},
+    },
+)
+async def plan_approve(args: dict) -> dict:
+    import asyncio
+    import uuid
+    from datetime import datetime, timezone
+
+    plan_id = args["plan_id"]
+
+    if not _db:
+        return {"content": [{"type": "text", "text": "Database not available."}]}
+    if not _engine:
+        return {"content": [{"type": "text", "text": "Engine not available — cannot spawn implementation session."}]}
+
+    plan = await _db.get_plan(plan_id)
+    if not plan:
+        return {"content": [{"type": "text", "text": f"Plan not found: {plan_id}"}]}
+
+    if plan["status"] != "pending":
+        return {"content": [{"type": "text", "text": f"Plan is '{plan['status']}' — only pending plans can be approved."}]}
+
+    task = await _db.get_task(plan["task_id"])
+    if not task:
+        return {"content": [{"type": "text", "text": f"Task not found: {plan['task_id']}"}]}
+
+    now = datetime.now(timezone.utc).isoformat()
+    plan_type = plan.get("plan_type", "generic")
+
+    # Mark as implementing (prevents double-approve)
+    await _db.update_plan(plan_id, status="implementing", reviewed_at=now)
+
+    # Create implementation session
+    impl_session_id = f"impl-{str(uuid.uuid4())[:8]}"
+    await _engine.sessions.get_or_create(
+        impl_session_id, title=f"Implement: {task['title']}", source="web",
+    )
+    await _db.update_plan(plan_id, impl_session_id=impl_session_id)
+
+    # Update task status
+    await task_update.handler({
+        "task_id": plan["task_id"],
+        "status": "in_progress",
+        "note": f"Plan approved — implementation started (session: {impl_session_id})",
+    })
+
+    # Read task file content
+    task_content = ""
+    if task.get("file_path") and _config:
+        task_file = _config.workspace / task["file_path"]
+        if task_file.exists():
+            task_content = task_file.read_text(encoding="utf-8")
+
+    # Build implementation prompt (skill-aware)
+    if plan_type in ("skill-create", "skill-update"):
+        prompt = (
+            f"You are implementing an approved plan for a skill task.\n\n"
+            f"## Task: {task['title']}\n\n"
+            f"### Task Content\n{task_content}\n\n"
+            f"## Approved Plan\n{plan['content']}\n\n"
+            f"## Instructions\n"
+        )
+        if plan_type == "skill-create":
+            prompt += (
+                "The plan contains a skill specification. "
+                "Use the `skill_create` tool to create the skill. "
+                "Extract the name, description, and content from the plan. "
+                "If the plan contains a full SKILL.md with frontmatter, parse out the name and description "
+                "from the frontmatter and use the body as the content.\n"
+            )
+        else:
+            prompt += (
+                "The plan contains a skill revision. "
+                "Use the `skill_update` tool to update the existing skill. "
+                "Pass the skill ID (directory name) as the name parameter and the full SKILL.md content "
+                "(frontmatter + body).\n"
+            )
+        prompt += (
+            "\nAfter the skill is created/updated, mark the task as done using "
+            "`task_done` with a note describing what was done.\n"
+        )
+    else:
+        prompt = (
+            f"You are implementing an approved plan for a task.\n\n"
+            f"## Task: {task['title']}\n\n"
+            f"### Task Content\n{task_content}\n\n"
+            f"## Approved Plan\n{plan['content']}\n\n"
+            f"## Instructions\n"
+            f"Follow the plan step by step. You have full tool access.\n"
+            f"After implementation, verify your changes work correctly.\n"
+            f"If you encounter issues not covered by the plan, use your judgment or ask the user.\n"
+        )
+
+    # Spawn implementation in background
+    async def _run_impl():
+        try:
+            await _engine.run(
+                session_id=impl_session_id, user_message=prompt, source="web",
+            )
+        except Exception:
+            logger.exception("Implementation session %s failed", impl_session_id)
+            try:
+                await _db.update_plan(plan_id, status="failed")
+            except Exception:
+                logger.exception("Failed to mark plan %s as failed", plan_id)
+
+    asyncio.create_task(_run_impl())
+
+    return {"content": [{"type": "text", "text": f"Plan {plan_id} approved. Implementation session started: {impl_session_id}"}]}
+
+
+@tool(
+    "plan_decline",
+    "Decline a pending plan. Optionally provide feedback explaining why.",
+    {
+        "plan_id": {"type": "string", "description": "The plan ID to decline"},
+        "feedback": {"type": "string", "description": "Optional reason for declining", "default": ""},
+    },
+)
+async def plan_decline(args: dict) -> dict:
+    from datetime import datetime, timezone
+
+    plan_id = args["plan_id"]
+    feedback = (args.get("feedback", "") or "").strip()
+
+    if not _db:
+        return {"content": [{"type": "text", "text": "Database not available."}]}
+
+    plan = await _db.get_plan(plan_id)
+    if not plan:
+        return {"content": [{"type": "text", "text": f"Plan not found: {plan_id}"}]}
+
+    if plan["status"] != "pending":
+        return {"content": [{"type": "text", "text": f"Plan is '{plan['status']}' — only pending plans can be declined."}]}
+
+    now = datetime.now(timezone.utc).isoformat()
+    fields = {"status": "declined", "reviewed_at": now}
+    if feedback:
+        fields["feedback"] = feedback
+    await _db.update_plan(plan_id, **fields)
+
+    # Write task note
+    feedback_suffix = ""
+    if feedback:
+        feedback_suffix = f" — {feedback[:80]}{'...' if len(feedback) > 80 else ''}"
+    await task_update.handler({
+        "task_id": plan["task_id"],
+        "note": f"Plan declined: {plan_id}{feedback_suffix}",
+    })
+
+    return {"content": [{"type": "text", "text": f"Plan {plan_id} declined.{(' Feedback: ' + feedback) if feedback else ''}"}]}
+
+
+@tool(
+    "plan_revise",
+    "Request revision of a pending plan. Sends feedback to the planner session which will propose a new version.",
+    {
+        "plan_id": {"type": "string", "description": "The plan ID to request revision for"},
+        "feedback": {"type": "string", "description": "What should be changed in the plan"},
+    },
+)
+async def plan_revise(args: dict) -> dict:
+    import asyncio
+
+    plan_id = args["plan_id"]
+    feedback = (args.get("feedback", "") or "").strip()
+
+    if not _db:
+        return {"content": [{"type": "text", "text": "Database not available."}]}
+    if not _engine:
+        return {"content": [{"type": "text", "text": "Engine not available — cannot send revision to planner."}]}
+    if not feedback:
+        return {"content": [{"type": "text", "text": "Feedback is required for revision requests."}]}
+
+    plan = await _db.get_plan(plan_id)
+    if not plan:
+        return {"content": [{"type": "text", "text": f"Plan not found: {plan_id}"}]}
+
+    if plan["status"] != "pending":
+        return {"content": [{"type": "text", "text": f"Plan is '{plan['status']}' — only pending plans can be revised."}]}
+
+    task = await _db.get_task(plan["task_id"])
+    if not task:
+        return {"content": [{"type": "text", "text": f"Task not found: {plan['task_id']}"}]}
+
+    # Store feedback on the plan
+    await _db.update_plan(plan_id, feedback=feedback)
+
+    # Write task note
+    feedback_summary = feedback[:80] + "..." if len(feedback) > 80 else feedback
+    await task_update.handler({
+        "task_id": plan["task_id"],
+        "note": f"Revision requested for {plan_id}: {feedback_summary}",
+    })
+
+    # Send revision request to persistent planner session
+    feedback_prompt = (
+        f'Revise plan {plan_id} for task "{task["title"]}" based on this feedback:\n\n'
+        f"{feedback}\n\n"
+        f"Explore the codebase again if needed, then call "
+        f'plan_propose(task_id="{plan["task_id"]}", content="...") with the revised plan.'
+    )
+
+    session_id = "cron:task-planner"
+    await _engine.sessions.get_or_create(
+        session_id, title="Cron: task-planner", source="cron",
+    )
+    asyncio.create_task(
+        _engine.run(session_id=session_id, user_message=feedback_prompt, source="cron")
+    )
+
+    return {"content": [{"type": "text", "text": f"Revision requested for {plan_id}. Feedback sent to planner session."}]}
 
 
 # --- Skill tools ---

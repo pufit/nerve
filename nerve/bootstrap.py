@@ -1058,47 +1058,29 @@ class SetupWizard:
         click.secho("  ✅ Nerve is configured!", fg="green", bold=True)
         click.echo()
 
+        click.secho("  Next steps:", bold=True)
         if self._inside_docker:
-            click.secho("  Starting Nerve inside Docker...", bold=True)
-            click.echo("  Open http://localhost:8900 in your browser.")
-            click.echo()
-            click.secho("  Management:", bold=True)
-            click.echo("    nerve stop                Stop the container")
-            click.echo("    nerve start               Start again")
-            click.echo("    nerve logs                Follow logs")
-            click.echo("    nerve status              Container status")
-            click.echo()
-            ws = os.path.expanduser(str(self.choices.workspace_path))
-            click.secho(f"  Your workspace: {ws}", bold=True)
-            click.echo("    Edit SOUL.md to customize Nerve's personality")
-            click.echo("    Edit USER.md to tell Nerve about yourself")
-            click.echo()
-            click.secho(
-                "  Tip: Nerve learns from every conversation. The more\n"
-                "  you interact, the more useful it becomes.",
-                dim=True,
-            )
-            click.echo()
-            # Auto-start Nerve inside the container
-            os.execvp("nerve", ["nerve", "start", "-f"])
+            click.echo("    nerve start              Start the container")
+            click.echo("    nerve stop               Stop the container")
+            click.echo("    nerve logs               Follow logs")
+            click.echo("    nerve status             Container status")
         else:
-            click.secho("  Next steps:", bold=True)
             click.echo("    nerve start              Start the server")
             click.echo("    nerve start -f           Start in foreground (see logs)")
             click.echo("    nerve doctor             Verify everything is set up")
-            click.echo("    http://localhost:8900     Open the web UI")
-            click.echo()
-            ws = os.path.expanduser(str(self.choices.workspace_path))
-            click.secho(f"  Your workspace: {ws}", bold=True)
-            click.echo("    Edit SOUL.md to customize Nerve's personality")
-            click.echo("    Edit USER.md to tell Nerve about yourself")
-            click.echo()
-            click.secho(
-                "  Tip: Nerve learns from every conversation. The more\n"
-                "  you interact, the more useful it becomes.",
-                dim=True,
-            )
-            click.echo()
+        click.echo("    http://localhost:8900     Open the web UI")
+        click.echo()
+        ws = os.path.expanduser(str(self.choices.workspace_path))
+        click.secho(f"  Your workspace: {ws}", bold=True)
+        click.echo("    Edit SOUL.md to customize Nerve's personality")
+        click.echo("    Edit USER.md to tell Nerve about yourself")
+        click.echo()
+        click.secho(
+            "  Tip: Nerve learns from every conversation. The more\n"
+            "  you interact, the more useful it becomes.",
+            dim=True,
+        )
+        click.echo()
 
 
 # --- Non-interactive mode ---

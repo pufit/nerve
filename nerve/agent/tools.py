@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from claude_agent_sdk import create_sdk_mcp_server, tool
+from claude_agent_sdk import SdkMcpTool, create_sdk_mcp_server, tool
 
 logger = logging.getLogger(__name__)
 
@@ -1628,16 +1628,11 @@ async def ask_user_tool(args: dict) -> dict:
     return await _ask_user_impl(args, _current_session_id)
 
 
-# All tools for registration
-ALL_TOOLS = [
-    task_create, task_search, task_list, task_update, task_read, task_write, task_done,
-    memory_recall, conversation_history, memory_records_by_date,
-    memorize, memory_update, memory_delete, category_update,
-    sync_status, list_sources, poll_source, poll_all_sources, read_source,
-    plan_propose, plan_list,
-    skill_list, skill_get, skill_read_reference, skill_run_script,
-    skill_create, skill_update,
-    notify, ask_user_tool,
+# Auto-collect all @tool-decorated functions defined in this module.
+# No manual list to forget updating when adding new tools.
+ALL_TOOLS: list[SdkMcpTool] = [
+    obj for obj in globals().values()
+    if isinstance(obj, SdkMcpTool)
 ]
 
 

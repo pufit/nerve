@@ -1121,6 +1121,10 @@ class MemUBridge:
                     prompt, *, max_tokens=None, system_prompt=None, temperature=0.2,
                     _orig=original_chat, _prof=profile,
                 ):
+                    # Anthropic API requires max_tokens >= 1; memU sometimes
+                    # omits it.  Default to 4096 to prevent 400 errors.
+                    if max_tokens is None:
+                        max_tokens = 4096
                     t0 = time.monotonic()
                     try:
                         return await asyncio.wait_for(

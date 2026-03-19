@@ -99,6 +99,7 @@ class TelegramChannel(BaseChannel):
         self._app.add_handler(CommandHandler("reply", self._handle_reply))
         self._app.add_handler(CallbackQueryHandler(self._handle_callback_query))
         self._app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle_message))
+        self._app.add_error_handler(self._handle_error)
 
         await self._app.initialize()
         await self._app.start()
@@ -259,19 +260,38 @@ class TelegramChannel(BaseChannel):
         if not self._is_authorized(update.effective_user.id):
             return
         chat_id = update.effective_chat.id
+        text = update.message.text
+        logger.info(
+            "Telegram message from %s: %s",
+            chat_id, text[:80] + ("..." if len(text) > 80 else ""),
+        )
 
         msg = InboundMessage(
             channel_name="telegram",
             channel_key=f"telegram:{chat_id}",
             sender_id=str(chat_id),
-            text=update.message.text,
+            text=text,
         )
 
         try:
             await self.router.handle_message(msg)
         except Exception as e:
-            logger.error("Agent error: %s", e)
-            await update.message.reply_text(f"Error: {e}")
+            logger.error("Agent error for chat %s: %s", chat_id, e, exc_info=True)
+            try:
+                await update.message.reply_text(f"Error: {e}")
+            except Exception:
+                logger.error("Failed to send error reply to chat %s", chat_id)
+
+    # ------------------------------------------------------------------ #
+    #  Error handler                                                       #
+    # ------------------------------------------------------------------ #
+
+    async def _handle_error(self, update: object, context: Any) -> None:
+        """Log errors from the Telegram bot polling/handler pipeline."""
+        logger.error(
+            "Telegram update error: %s (update=%s)",
+            context.error, update, exc_info=context.error,
+        )
 
     # ------------------------------------------------------------------ #
     #  Notification callback handlers                                      #

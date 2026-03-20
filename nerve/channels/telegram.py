@@ -7,6 +7,7 @@ Session management is delegated to ChannelRouter.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any, TYPE_CHECKING
 
@@ -32,6 +33,11 @@ logger = logging.getLogger(__name__)
 MAX_MSG_LEN = 4096
 # Minimum interval between message edits (seconds) to avoid rate limits
 EDIT_INTERVAL = 1.5
+# Polling watchdog settings
+WATCHDOG_INTERVAL = 30  # seconds between health checks
+MAX_RESTART_ATTEMPTS = 10  # consecutive failures before entering cooldown
+RESTART_BACKOFF_BASE = 5  # seconds, doubles each attempt, capped at 300s
+COOLDOWN_INTERVAL = 300  # seconds to wait after exhausting restart attempts
 
 
 class TelegramChannel(BaseChannel):
@@ -47,6 +53,8 @@ class TelegramChannel(BaseChannel):
         self._app: Application | None = None
         self._allowed_users: set[int] = set(config.telegram.allowed_users)
         self._notification_service = None  # Set after service is created
+        self._watchdog_task: asyncio.Task | None = None
+        self._stopping = False
 
     def set_notification_service(self, service) -> None:
         """Wire the notification service for callback query handling."""
@@ -85,6 +93,7 @@ class TelegramChannel(BaseChannel):
             logger.warning("Telegram bot token not configured")
             return
 
+        self._stopping = False
         self._app = (
             Application.builder()
             .token(self.config.telegram.bot_token)
@@ -106,11 +115,155 @@ class TelegramChannel(BaseChannel):
         await self._app.updater.start_polling(drop_pending_updates=True)
         logger.info("Telegram bot started polling")
 
+        # Launch watchdog to auto-restart polling if it silently dies
+        self._watchdog_task = asyncio.create_task(
+            self._run_watchdog(), name="telegram-polling-watchdog",
+        )
+
     async def stop(self) -> None:
+        self._stopping = True
+        if self._watchdog_task and not self._watchdog_task.done():
+            self._watchdog_task.cancel()
+            try:
+                await self._watchdog_task
+            except asyncio.CancelledError:
+                pass
         if self._app:
             await self._app.updater.stop()
             await self._app.stop()
             await self._app.shutdown()
+
+    # ------------------------------------------------------------------ #
+    #  Polling watchdog — detect silent crashes and auto-restart           #
+    # ------------------------------------------------------------------ #
+
+    async def _run_watchdog(self) -> None:
+        """Monitor polling health and auto-restart if it dies.
+
+        python-telegram-bot's polling runs as an internal asyncio task.
+        If that task crashes, the Updater.running flag stays True (it's
+        only cleared by an explicit stop() call), so we inspect the
+        actual task object to detect silent deaths.
+
+        Never gives up permanently — after exhausting rapid restart
+        attempts, enters a cooldown period and then tries again.
+        """
+        restart_count = 0
+        while not self._stopping:
+            try:
+                await asyncio.sleep(WATCHDOG_INTERVAL)
+            except asyncio.CancelledError:
+                break
+
+            if self._app is None or self._stopping:
+                break
+
+            try:
+                alive = self._is_polling_alive()
+            except Exception as e:
+                logger.error(
+                    "Watchdog health check failed: %s", e, exc_info=True,
+                )
+                continue
+
+            if alive:
+                if restart_count > 0:
+                    logger.info(
+                        "Telegram polling healthy after %d restart(s)",
+                        restart_count,
+                    )
+                restart_count = 0
+                continue
+
+            # Polling is dead
+            restart_count += 1
+            if restart_count > MAX_RESTART_ATTEMPTS:
+                logger.warning(
+                    "Telegram polling: exhausted %d restart attempts — "
+                    "entering cooldown (%ds) before retrying",
+                    MAX_RESTART_ATTEMPTS, COOLDOWN_INTERVAL,
+                )
+                try:
+                    await asyncio.sleep(COOLDOWN_INTERVAL)
+                except asyncio.CancelledError:
+                    break
+                if self._stopping:
+                    break
+                restart_count = 1  # reset counter, start a fresh round
+                logger.info("Telegram polling: cooldown over, resuming restart attempts")
+
+            delay = min(RESTART_BACKOFF_BASE * (2 ** (restart_count - 1)), 300)
+            logger.warning(
+                "Telegram polling died — restarting in %ds (attempt %d/%d)",
+                delay, restart_count, MAX_RESTART_ATTEMPTS,
+            )
+
+            try:
+                await asyncio.sleep(delay)
+            except asyncio.CancelledError:
+                break
+
+            if self._stopping:
+                break
+
+            try:
+                await self._restart_polling()
+                logger.info(
+                    "Telegram polling restarted successfully (attempt %d/%d)",
+                    restart_count, MAX_RESTART_ATTEMPTS,
+                )
+            except Exception as e:
+                logger.error(
+                    "Telegram polling restart failed: %s", e, exc_info=True,
+                )
+
+    def _is_polling_alive(self) -> bool:
+        """Check whether the Telegram polling loop is still running.
+
+        We check two things:
+        1. Updater.running flag (catches explicit stops)
+        2. The internal __polling_task (catches silent crashes where
+           the task died but _running was never cleared)
+        """
+        if not self._app or not self._app.updater:
+            return False
+
+        # Check 1: updater thinks it's not running → definitely dead
+        if not self._app.updater.running:
+            return False
+
+        # Check 2: internal polling task crashed silently
+        # PTB v22 stores it as __polling_task (name-mangled)
+        polling_task: asyncio.Task | None = getattr(
+            self._app.updater, "_Updater__polling_task", None,
+        )
+        if polling_task is not None and polling_task.done():
+            try:
+                exc = polling_task.exception()
+            except (asyncio.CancelledError, asyncio.InvalidStateError):
+                exc = None
+            logger.warning(
+                "Telegram polling task is dead (exception: %s)", exc,
+            )
+            return False
+
+        return True
+
+    async def _restart_polling(self) -> None:
+        """Stop the updater cleanly, then start a fresh polling loop."""
+        if self._app is None:
+            return
+
+        # stop() sets _running=False and cancels the dead task
+        try:
+            await self._app.updater.stop()
+        except Exception as e:
+            logger.debug("Updater stop during restart: %s", e)
+
+        await asyncio.sleep(1)
+
+        # Don't drop pending updates on restart — we might have missed some
+        await self._app.updater.start_polling(drop_pending_updates=False)
 
     # ------------------------------------------------------------------ #
     #  Outbound: send complete message                                     #

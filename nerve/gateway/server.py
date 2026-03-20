@@ -91,13 +91,13 @@ async def lifespan(app: FastAPI):
     set_notification_service(notification_service)
 
     # Start Telegram bot if enabled
-    telegram_task = None
+    telegram_channel = None
     if config.telegram.enabled and config.telegram.bot_token:
         from nerve.channels.telegram import TelegramChannel
-        telegram = TelegramChannel(config, _engine.router)
-        telegram.set_notification_service(notification_service)
-        _engine.register_channel(telegram)
-        telegram_task = asyncio.create_task(telegram.start())
+        telegram_channel = TelegramChannel(config, _engine.router)
+        telegram_channel.set_notification_service(notification_service)
+        _engine.register_channel(telegram_channel)
+        await telegram_channel.start()
         logger.info("Telegram bot started")
 
     # Start cron service
@@ -195,8 +195,8 @@ async def lifespan(app: FastAPI):
     # Shutdown
     if cron_task:
         await cron_task.stop()
-    if telegram_task:
-        telegram_task.cancel()
+    if telegram_channel:
+        await telegram_channel.stop()
     await _engine.shutdown()
     await close_db()
     if proxy_service:

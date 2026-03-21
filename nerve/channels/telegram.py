@@ -539,7 +539,12 @@ class TelegramChannel(BaseChannel):
         # Stop the current session before creating a new one
         prev = await self.router.get_last_session(channel_key)
         if prev:
-            await self.router.engine.stop_session(prev)
+            stopped = await self.router.engine.stop_session(prev)
+            if stopped:
+                await update.message.reply_text(
+                    f"Stopped session `{prev}`.",
+                    parse_mode=ParseMode.MARKDOWN,
+                )
 
         title = " ".join(context.args) if context.args else None
         session_id = await self.router.create_session(

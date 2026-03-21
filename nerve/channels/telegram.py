@@ -351,11 +351,20 @@ class TelegramChannel(BaseChannel):
         if self._app is None:
             return
         chat_id = int(target)
-        await self._app.bot.edit_message_text(
-            chat_id=chat_id,
-            message_id=int(message_id),
-            text=text,
-        )
+        try:
+            await self._app.bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=int(message_id),
+                text=text,
+                parse_mode=ParseMode.MARKDOWN,
+            )
+        except Exception:
+            # Fallback: send without markdown if parsing fails
+            await self._app.bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=int(message_id),
+                text=text,
+            )
 
     async def send_typing(self, target: str) -> None:
         """Show typing indicator."""

@@ -1104,6 +1104,11 @@ class AgentEngine:
                 session_id, source, model, fork_from=fork_from,
             )
 
+            # Check for deferred /stop that arrived while we were setting up
+            if self.sessions.pop_stop_request(session_id):
+                logger.info("Stop requested before agent turn — aborting session %s", session_id)
+                return ""
+
             # Send message — the client preserves conversation history internally
             if images:
                 # Build multi-modal content blocks (text + images)

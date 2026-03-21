@@ -60,6 +60,9 @@ class SessionManager:
         # Running task tracking
         self._running_tasks: dict[str, asyncio.Task] = {}
         self._running_sessions: set[str] = set()
+        # Stop-requested flag: set when /stop arrives before the SDK client
+        # is registered.  _run_inner() checks this after creating the client.
+        self._stop_requested: set[str] = set()
         # Serialize status transitions
         self._transition_lock = asyncio.Lock()
         # Callback for memorizing session before close/archive/delete.
@@ -323,11 +326,24 @@ class SessionManager:
         """Return the set of currently running session IDs."""
         return set(self._running_sessions)
 
+    def request_stop(self, session_id: str) -> None:
+        """Set a deferred stop flag (checked by _run_inner after client init)."""
+        self._stop_requested.add(session_id)
+
+    def pop_stop_request(self, session_id: str) -> bool:
+        """Return True and clear if a stop was requested for *session_id*."""
+        try:
+            self._stop_requested.remove(session_id)
+            return True
+        except KeyError:
+            return False
+
     async def stop_session(self, session_id: str) -> bool:
         """Stop a running session.
 
         Uses SDK client.interrupt() first for clean stop, falls back to
-        asyncio task cancellation.  Returns True if something was stopped.
+        asyncio task cancellation, then deferred stop flag if the client
+        hasn't been created yet.  Returns True if something was stopped.
         """
         # Try SDK interrupt first (cleanly stops the current turn)
         client = self._clients.get(session_id)
@@ -347,6 +363,13 @@ class SessionManager:
         if task and not task.done():
             task.cancel()
             logger.info("Cancelled task for session %s", session_id)
+            return True
+
+        # Session is running but client/task not registered yet — set a
+        # deferred stop flag that _run_inner() will check after client init.
+        if self.is_running(session_id):
+            self.request_stop(session_id)
+            logger.info("Deferred stop requested for session %s", session_id)
             return True
 
         return False

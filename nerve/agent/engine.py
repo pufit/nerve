@@ -997,6 +997,7 @@ class AgentEngine:
         channel: str | None = None,
         model: str | None = None,
         internal: bool = False,
+        images: list[dict[str, Any]] | None = None,
     ) -> str:
         """Run the agent for a user message and return the final text response.
 
@@ -1004,6 +1005,8 @@ class AgentEngine:
             internal: If True, the user_message is a system-generated trigger
                       (e.g., background task completion) and won't be stored in
                       DB or shown in the UI.
+            images: Optional list of image dicts with keys ``type``,
+                    ``media_type``, and ``data`` (base64-encoded).
         """
         if self.sessions.is_running(session_id):
             raise RuntimeError(f"Session {session_id} is already running")
@@ -1020,7 +1023,7 @@ class AgentEngine:
             try:
                 return await self._run_inner(
                     session_id, user_message, source, channel, model,
-                    internal=internal,
+                    internal=internal, images=images,
                 )
             finally:
                 self.sessions.mark_not_running(session_id)
@@ -1040,6 +1043,7 @@ class AgentEngine:
         channel: str | None,
         model: str | None,
         internal: bool = False,
+        images: list[dict[str, Any]] | None = None,
     ) -> str:
         # Ensure session exists in DB
         await self.sessions.get_or_create(session_id, source=source)
@@ -1066,9 +1070,13 @@ class AgentEngine:
                     self._generate_session_title(session_id, user_message),
                 )
 
-            # Store user message in DB
+            # Store user message in DB (note attached images for display)
+            db_text = user_message
+            if images:
+                suffix = f"\n[{len(images)} image(s) attached]"
+                db_text = (user_message + suffix) if user_message else suffix.strip()
             await self.sessions.add_message(
-                session_id, "user", user_message, channel=channel,
+                session_id, "user", db_text, channel=channel,
             )
 
         full_response_text = ""
@@ -1097,7 +1105,31 @@ class AgentEngine:
             )
 
             # Send message — the client preserves conversation history internally
-            await client.query(user_message)
+            if images:
+                # Build multi-modal content blocks (text + images)
+                content_blocks: list[dict[str, Any]] = []
+                if user_message:
+                    content_blocks.append({"type": "text", "text": user_message})
+                for img in images:
+                    content_blocks.append({
+                        "type": "image",
+                        "source": {
+                            "type": img["type"],
+                            "media_type": img["media_type"],
+                            "data": img["data"],
+                        },
+                    })
+
+                async def _image_prompt():
+                    yield {
+                        "type": "user",
+                        "message": {"role": "user", "content": content_blocks},
+                        "parent_tool_use_id": None,
+                    }
+
+                await client.query(_image_prompt())
+            else:
+                await client.query(user_message)
 
             async for message in client.receive_response():
                 if isinstance(message, AssistantMessage):

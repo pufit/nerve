@@ -8,6 +8,7 @@ Session management is delegated to ChannelRouter.
 from __future__ import annotations
 
 import asyncio
+import base64
 import html as _html
 import logging
 import re
@@ -119,6 +120,9 @@ class TelegramChannel(BaseChannel):
         self._watchdog_task: asyncio.Task | None = None
         self._stopping = False
         self._last_update_time: float = 0.0  # monotonic, set on any incoming update
+        # Media group (album) collection: group_id -> list of updates
+        self._media_groups: dict[str, list[Update]] = {}
+        self._media_group_tasks: dict[str, asyncio.Task] = {}
 
     def set_notification_service(self, service) -> None:
         """Wire the notification service for callback query handling."""
@@ -175,7 +179,10 @@ class TelegramChannel(BaseChannel):
         app.add_handler(CommandHandler("new", self._handle_new_session))
         app.add_handler(CommandHandler("reply", self._handle_reply))
         app.add_handler(CallbackQueryHandler(self._handle_callback_query))
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle_message))
+        app.add_handler(MessageHandler(
+            (filters.TEXT | filters.PHOTO) & ~filters.COMMAND,
+            self._handle_message,
+        ))
         app.add_error_handler(self._handle_error)
 
         return app
@@ -537,16 +544,48 @@ class TelegramChannel(BaseChannel):
     #  Message handler — construct InboundMessage and delegate             #
     # ------------------------------------------------------------------ #
 
+    async def _extract_image(self, message: Any) -> dict[str, str] | None:
+        """Download and base64-encode an image from a Telegram message."""
+        if message.photo:
+            # Telegram provides multiple resolutions; pick the largest
+            photo = message.photo[-1]
+            tg_file = await photo.get_file()
+            data = await tg_file.download_as_bytearray()
+            return {
+                "type": "base64",
+                "media_type": "image/jpeg",
+                "data": base64.b64encode(bytes(data)).decode("utf-8"),
+            }
+        return None
+
     async def _handle_message(self, update: Update, context: Any) -> None:
-        """Handle incoming text messages — delegate to router."""
+        """Handle incoming text and photo messages — delegate to router."""
         self._touch()
         if not self._is_authorized(update.effective_user.id):
             return
+
+        # Media group (album) — collect all parts before processing
+        if update.message.media_group_id:
+            await self._collect_media_group(update)
+            return
+
         chat_id = update.effective_chat.id
-        text = update.message.text
+        text = update.message.text or update.message.caption or ""
+
+        # Extract image if present
+        images: list[dict[str, str]] = []
+        image = await self._extract_image(update.message)
+        if image:
+            images.append(image)
+
+        if not text and not images:
+            return
+
         logger.info(
-            "Telegram message from %s: %s",
-            chat_id, text[:80] + ("..." if len(text) > 80 else ""),
+            "Telegram message from %s: %s%s",
+            chat_id,
+            (text[:80] + ("..." if len(text) > 80 else "")) if text else "(no text)",
+            f" [{len(images)} image(s)]" if images else "",
         )
 
         msg = InboundMessage(
@@ -554,6 +593,7 @@ class TelegramChannel(BaseChannel):
             channel_key=f"telegram:{chat_id}",
             sender_id=str(chat_id),
             text=text,
+            metadata={"images": images} if images else {},
         )
 
         try:
@@ -562,6 +602,77 @@ class TelegramChannel(BaseChannel):
             logger.error("Agent error for chat %s: %s", chat_id, e, exc_info=True)
             try:
                 await update.message.reply_text(f"Error: {e}")
+            except Exception:
+                logger.error("Failed to send error reply to chat %s", chat_id)
+
+    # ------------------------------------------------------------------ #
+    #  Media group (album) collection                                     #
+    # ------------------------------------------------------------------ #
+
+    async def _collect_media_group(self, update: Update) -> None:
+        """Buffer a media-group message; schedule processing after a short delay."""
+        group_id = update.message.media_group_id
+        if group_id not in self._media_groups:
+            self._media_groups[group_id] = []
+        self._media_groups[group_id].append(update)
+
+        # Reset the timer — wait for remaining album parts
+        task = self._media_group_tasks.get(group_id)
+        if task:
+            task.cancel()
+        self._media_group_tasks[group_id] = asyncio.create_task(
+            self._process_media_group(group_id),
+        )
+
+    async def _process_media_group(self, group_id: str) -> None:
+        """Wait briefly for all album parts, then send as one message."""
+        await asyncio.sleep(0.5)
+
+        updates = self._media_groups.pop(group_id, [])
+        self._media_group_tasks.pop(group_id, None)
+        if not updates:
+            return
+
+        chat_id = updates[0].effective_chat.id
+
+        # Caption is usually on the first message only
+        text = ""
+        for u in updates:
+            caption = u.message.text or u.message.caption or ""
+            if caption:
+                text = caption
+                break
+
+        # Download all images
+        images: list[dict[str, str]] = []
+        for u in updates:
+            image = await self._extract_image(u.message)
+            if image:
+                images.append(image)
+
+        if not text and not images:
+            return
+
+        logger.info(
+            "Telegram media group from %s: %d image(s), caption: %s",
+            chat_id, len(images),
+            (text[:80] + "..." if len(text) > 80 else text) if text else "(none)",
+        )
+
+        msg = InboundMessage(
+            channel_name="telegram",
+            channel_key=f"telegram:{chat_id}",
+            sender_id=str(chat_id),
+            text=text,
+            metadata={"images": images} if images else {},
+        )
+
+        try:
+            await self.router.handle_message(msg)
+        except Exception as e:
+            logger.error("Agent error for chat %s: %s", chat_id, e, exc_info=True)
+            try:
+                await updates[0].message.reply_text(f"Error: {e}")
             except Exception:
                 logger.error("Failed to send error reply to chat %s", chat_id)
 

@@ -114,12 +114,16 @@ class ChannelRouter:
             channel, msg.sender_id, session_id,
         )
 
+        # Extract images from metadata (e.g. Telegram photos)
+        images = msg.metadata.get("images") if msg.metadata else None
+
         try:
             response = await self.engine.run(
                 session_id=session_id,
                 user_message=msg.text,
                 source=msg.channel_name,
                 channel=msg.channel_name,
+                images=images,
             )
             return response
         finally:

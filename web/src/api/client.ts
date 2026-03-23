@@ -187,6 +187,15 @@ export const api = {
     const qs = consumer ? `?consumer=${encodeURIComponent(consumer)}` : '';
     return request<{ consumers: any[] }>(`/sources/consumers${qs}`);
   },
+  getSourceHealth: () =>
+    request<{ health: Record<string, {
+      state: 'healthy' | 'degraded' | 'open';
+      consecutive_failures: number;
+      last_error: string | null;
+      last_error_at: string | null;
+      last_success_at: string | null;
+      backoff_until: string | null;
+    }> }>('/sources/health'),
 
   // Modified files
   getModifiedFiles: (sessionId: string) =>

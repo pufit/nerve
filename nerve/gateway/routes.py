@@ -1089,13 +1089,7 @@ async def diagnostics(user: dict = Depends(require_auth)):
                     known_sources.add(runner.source.source_name)
 
             # From DB (includes sources that ran before but may no longer be configured)
-            import sqlite3
-            conn = sqlite3.connect(str(_db.db_path))
-            for row in conn.execute("SELECT DISTINCT source FROM sync_cursors"):
-                known_sources.add(row[0])
-            for row in conn.execute("SELECT DISTINCT source FROM source_run_log"):
-                known_sources.add(row[0])
-            conn.close()
+            known_sources |= await _db.get_known_source_names()
 
             for source in sorted(known_sources):
                 cursor = await _db.get_sync_cursor(source)
@@ -1256,19 +1250,15 @@ async def trigger_single_source_sync(source_name: str, user: dict = Depends(requ
     if _db:
         await _db.log_source_run(
             source=source_name,
-            records_fetched=result.records_processed + result.records_skipped,
-            records_processed=result.records_processed,
+            records_fetched=result.records_ingested,
+            records_processed=result.records_ingested,
             error=result.error,
-            session_id=result.session_id,
         )
 
     return {
         "source": source_name,
-        "records_processed": result.records_processed,
-        "records_skipped": result.records_skipped,
-        "actions_taken": result.actions_taken,
+        "records_ingested": result.records_ingested,
         "error": result.error,
-        "session_id": result.session_id,
     }
 
 
@@ -1288,14 +1278,12 @@ async def trigger_all_sources_sync(user: dict = Depends(require_auth)):
         if _db:
             await _db.log_source_run(
                 source=name,
-                records_fetched=result.records_processed + result.records_skipped,
-                records_processed=result.records_processed,
+                records_fetched=result.records_ingested,
+                records_processed=result.records_ingested,
                 error=result.error,
-                session_id=result.session_id,
             )
         results[name] = {
-            "records_processed": result.records_processed,
-            "records_skipped": result.records_skipped,
+            "records_ingested": result.records_ingested,
             "error": result.error,
         }
 
@@ -1366,12 +1354,8 @@ async def source_overview(user: dict = Depends(require_auth)):
             known_sources.add(runner.source.source_name)
 
     # From DB cursors
-    import sqlite3
     try:
-        conn = sqlite3.connect(str(_db.db_path))
-        for row in conn.execute("SELECT DISTINCT source FROM sync_cursors"):
-            known_sources.add(row[0])
-        conn.close()
+        known_sources |= await _db.get_known_source_names()
     except Exception:
         pass
 
@@ -1436,6 +1420,26 @@ async def get_consumer_cursors(consumer: str | None = None, user: dict = Depends
         raise HTTPException(status_code=503, detail="Database not available")
     cursors = await _db.list_consumer_cursors(consumer=consumer)
     return {"consumers": cursors}
+
+
+@router.get("/api/sources/health")
+async def get_source_health(user: dict = Depends(require_auth)):
+    """Per-source circuit breaker health state."""
+    from nerve.gateway.server import _cron_service
+
+    health: dict[str, dict] = {}
+    runners = getattr(_cron_service, "_source_runners", [])
+    for runner in runners:
+        h = runner.health
+        health[runner.source.source_name] = {
+            "state": h.state,
+            "consecutive_failures": h.consecutive_failures,
+            "last_error": h.last_error,
+            "last_error_at": h.last_error_at.isoformat() if h.last_error_at else None,
+            "last_success_at": h.last_success_at.isoformat() if h.last_success_at else None,
+            "backoff_until": h.backoff_until.isoformat() if h.backoff_until else None,
+        }
+    return {"health": health}
 
 
 # --- Notifications ---

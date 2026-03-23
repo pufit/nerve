@@ -110,6 +110,10 @@ async def lifespan(app: FastAPI):
         cron_task = cron
         _cron_service = cron
         logger.info("Cron service started")
+
+        # Wire notification service to source runners for health alerts
+        for runner in cron._source_runners:
+            runner.set_notification_service(notification_service)
     except Exception as e:
         logger.warning("Cron service failed to start: %s", e)
 

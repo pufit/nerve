@@ -427,6 +427,17 @@ class SourceStore:
                     pass
         return rows
 
+    async def get_known_source_names(self) -> set[str]:
+        """Get distinct source names from sync_cursors and source_run_log."""
+        names: set[str] = set()
+        async with self.db.execute("SELECT DISTINCT source FROM sync_cursors") as cursor:
+            async for row in cursor:
+                names.add(row[0])
+        async with self.db.execute("SELECT DISTINCT source FROM source_run_log") as cursor:
+            async for row in cursor:
+                names.add(row[0])
+        return names
+
     async def cleanup_expired_consumer_cursors(self) -> int:
         """Delete expired consumer cursors. Returns count deleted."""
         now = datetime.now(timezone.utc).isoformat()

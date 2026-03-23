@@ -42,6 +42,15 @@ export interface SourceRun {
   session_id: string | null;
 }
 
+export interface SourceHealthEntry {
+  state: 'healthy' | 'degraded' | 'open';
+  consecutive_failures: number;
+  last_error: string | null;
+  last_error_at: string | null;
+  last_success_at: string | null;
+  backoff_until: string | null;
+}
+
 export interface ConsumerCursor {
   consumer: string;
   source: string;
@@ -60,6 +69,7 @@ interface SourcesState {
   selectedRun: SourceRun | null;
   selectedRunMessages: SourceMessage[];
   consumers: ConsumerCursor[];
+  sourceHealth: Record<string, SourceHealthEntry> | null;
   activeSource: string | null;
   activeTab: 'inbox' | 'runs' | 'consumers';
   hasMore: boolean;
@@ -76,6 +86,7 @@ interface SourcesState {
   loadRuns: () => Promise<void>;
   selectRun: (run: SourceRun) => Promise<void>;
   loadConsumers: () => Promise<void>;
+  fetchSourceHealth: () => Promise<void>;
   syncSource: (source: string) => Promise<void>;
   syncAll: () => Promise<void>;
   purgeMessages: (source?: string) => Promise<void>;
@@ -90,6 +101,7 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
   selectedRun: null,
   selectedRunMessages: [],
   consumers: [],
+  sourceHealth: null,
   activeSource: null,
   activeTab: 'inbox',
   hasMore: false,
@@ -214,6 +226,15 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
     } catch (e) {
       console.error('Failed to load consumer cursors:', e);
       set({ loading: false });
+    }
+  },
+
+  fetchSourceHealth: async () => {
+    try {
+      const data = await api.getSourceHealth();
+      set({ sourceHealth: data.health });
+    } catch (e) {
+      console.error('Failed to fetch source health:', e);
     }
   },
 

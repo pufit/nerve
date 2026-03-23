@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 import {
   RefreshCw, Play, Loader2, Mail, Github, MessageCircle, Inbox,
   ExternalLink, Trash2, ChevronDown, ChevronRight,
-  CheckCircle2, XCircle, HardDrive, Database, Filter,
+  CheckCircle2, XCircle, HardDrive, Database, Filter, AlertTriangle,
 } from 'lucide-react';
 import { useSourcesStore, type SourceOverviewEntry } from '../stores/sourcesStore';
 import { MessageContent } from '../components/Sources/MessageContent';
@@ -81,10 +81,31 @@ function SyncButton({ onClick, small = false }: { onClick: () => Promise<void>; 
   );
 }
 
+// --- Health Badge ---
+
+function HealthBadge({ state }: { state: 'healthy' | 'degraded' | 'open' | undefined }) {
+  if (!state || state === 'healthy') return null;
+
+  const config = {
+    degraded: { Icon: AlertTriangle, color: 'text-amber-400', bg: 'bg-amber-950/20', label: 'degraded' },
+    open:     { Icon: XCircle,       color: 'text-red-400',   bg: 'bg-red-950/20',   label: 'circuit open' },
+  }[state];
+  if (!config) return null;
+
+  const { Icon } = config;
+  return (
+    <span className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${config.color} ${config.bg}`}
+          title={`Source is ${config.label} — check runs tab for errors`}>
+      <Icon size={10} />
+      {config.label}
+    </span>
+  );
+}
+
 // --- Sidebar ---
 
 function SourceSidebar() {
-  const { overview, activeSource, setActiveSource, activeTab, setActiveTab, syncSource, purgeMessages, consumers } = useSourcesStore();
+  const { overview, activeSource, setActiveSource, activeTab, setActiveTab, syncSource, purgeMessages, consumers, sourceHealth } = useSourcesStore();
   const [purgeConfirm, setPurgeConfirm] = useState<string | null>(null);
 
   const sources = overview?.sources || {};
@@ -120,9 +141,10 @@ function SourceSidebar() {
               <button onClick={() => setActiveSource(src)}
                 className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-[13px] transition-colors cursor-pointer
                   ${activeSource === src ? 'bg-[#6366f1]/15 text-[#6366f1]' : 'text-[#999] hover:text-[#ccc] hover:bg-[#1a1a1a]'}`}>
-                <span className="flex items-center gap-2 min-w-0 truncate">
+                <span className="flex items-center gap-1.5 min-w-0 truncate">
                   {sourceIcon(src)}
                   <span className="truncate">{sourceLabel(src)}</span>
+                  <HealthBadge state={sourceHealth?.[src]?.state} />
                 </span>
                 <span className="shrink-0 flex items-center gap-1.5">
                   {unread > 0 && (
@@ -187,6 +209,14 @@ function SourceSidebar() {
         ) : overview ? (
           <AggregateStats sources={sources} />
         ) : null}
+
+        {/* Health summary */}
+        {sourceHealth && Object.values(sourceHealth).some(h => h.state !== 'healthy') && (
+          <div className="text-[11px] text-amber-400 flex items-center gap-1 pt-1">
+            <AlertTriangle size={10} />
+            {Object.values(sourceHealth).filter(h => h.state !== 'healthy').length} source(s) unhealthy
+          </div>
+        )}
       </div>
     </div>
   );
@@ -288,7 +318,7 @@ function MessageList() {
 // --- Runs List ---
 
 function RunsList() {
-  const { runs, selectedRun, selectRun, loading } = useSourcesStore();
+  const { runs, selectedRun, selectRun, loading, activeSource, sourceHealth } = useSourcesStore();
   const [hideEmpty, setHideEmpty] = useState(true);
 
   const filteredRuns = hideEmpty
@@ -303,8 +333,38 @@ function RunsList() {
     return <div className="flex-1 flex items-center justify-center text-[#444] text-sm">No runs recorded</div>;
   }
 
+  const healthEntry = activeSource ? sourceHealth?.[activeSource] : null;
+  const isUnhealthy = healthEntry && healthEntry.state !== 'healthy';
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Health info card */}
+      {isUnhealthy && (
+        <div className={`mx-3 mt-2 mb-1 p-2 rounded text-[12px] ${
+          healthEntry.state === 'open'
+            ? 'bg-red-950/20 border border-red-900/30'
+            : 'bg-amber-950/20 border border-amber-900/30'
+        }`}>
+          <div className={`flex items-center gap-1.5 font-medium mb-1 ${
+            healthEntry.state === 'open' ? 'text-red-400' : 'text-amber-400'
+          }`}>
+            <AlertTriangle size={12} />
+            Circuit breaker: {healthEntry.state}
+          </div>
+          <div className="text-[#888]">
+            {healthEntry.consecutive_failures} consecutive failure{healthEntry.consecutive_failures !== 1 ? 's' : ''}
+            {healthEntry.backoff_until && (
+              <> · Backoff until {new Date(healthEntry.backoff_until).toLocaleTimeString()}</>
+            )}
+          </div>
+          {healthEntry.last_error && (
+            <div className="mt-1 text-[11px] text-[#666] truncate">
+              Last error: {healthEntry.last_error}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Filter bar */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#1a1a1a] shrink-0">
         <span className="text-[11px] text-[#666]">
@@ -663,13 +723,19 @@ function ConsumersDetail() {
 // --- Main Page ---
 
 export function SourcesPage() {
-  const { activeTab, loadOverview, loadMessages, loadConsumers, syncAll } = useSourcesStore();
+  const { activeTab, loadOverview, loadMessages, loadConsumers, fetchSourceHealth, syncAll } = useSourcesStore();
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     loadOverview();
     loadMessages();
-    loadConsumers();  // Load consumer cursors for sidebar unread badges
+    loadConsumers();
+    fetchSourceHealth();
+    const interval = setInterval(() => {
+      loadOverview();
+      fetchSourceHealth();
+    }, 30_000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleSyncAll = async () => {

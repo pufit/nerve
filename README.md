@@ -216,11 +216,13 @@ nerve (single Python process)
 
 ## Quick Start
 
+**Prerequisites:** [Git](https://git-scm.com/), [Python 3.13+](https://www.python.org/), [uv](https://docs.astral.sh/uv/), [Node.js 18+](https://nodejs.org/) (for web UI build)
+
 ```bash
 # Install
 git clone https://github.com/pufitdev/nerve.git
 cd nerve
-uv venv && source .venv/bin/activate
+uv venv --python 3.13 && source .venv/bin/activate
 uv pip install -e .
 
 # Interactive setup — creates config, workspace, and cron jobs
@@ -255,11 +257,12 @@ See [docs/config.md](docs/config.md) for all options.
 
 ## Requirements
 
-- Python 3.12+
-- Node.js 18+ (for web UI build)
-- Claude Code CLI (bundled with `claude-agent-sdk`)
+- [Python](https://www.python.org/) 3.13+
+- [uv](https://docs.astral.sh/uv/) (recommended package manager)
+- [Node.js](https://nodejs.org/) 18+ (for web UI build)
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview) (bundled with `claude-agent-sdk`)
 - Anthropic API key **or** Claude subscription via [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) proxy
-- Optional: OpenAI API key (for memU embeddings), Telegram bot token, `gog` CLI, `gh` CLI
+- Optional: OpenAI API key (for memU embeddings), Telegram bot token, [gog](https://github.com/googleworkspace/cli) CLI, [gh](https://cli.github.com/) CLI
 
 ## Documentation
 

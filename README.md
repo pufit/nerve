@@ -28,12 +28,6 @@ curl -fsSL https://raw.githubusercontent.com/pufit/nerve/main/install.sh | bash
 
 The installer handles everything — installs dependencies (Python, Node.js, uv), clones the repo, builds the web UI, and launches the interactive setup wizard.
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `NERVE_INSTALL_DIR` | `~/nerve` | Where to clone the repo |
-| `NERVE_BRANCH` | `main` | Git branch to install |
-| `NERVE_YES` | `1` | Set to `1` to skip confirmation prompts |
-
 <details>
 <summary><strong>Manual install</strong></summary>
 

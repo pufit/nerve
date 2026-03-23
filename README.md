@@ -216,25 +216,32 @@ nerve (single Python process)
 
 ## Quick Start
 
-**Prerequisites:** [Git](https://git-scm.com/), [Python 3.13+](https://www.python.org/), [uv](https://docs.astral.sh/uv/), [Node.js 18+](https://nodejs.org/) (for web UI build)
+```bash
+curl -fsSL https://raw.githubusercontent.com/pufitdev/nerve/main/install.sh | bash
+```
+
+The installer handles everything — installs dependencies (Python, Node.js, uv), clones the repo, builds the web UI, and launches the interactive setup wizard.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NERVE_INSTALL_DIR` | `~/nerve` | Where to clone the repo |
+| `NERVE_BRANCH` | `main` | Git branch to install |
+| `NERVE_YES` | `1` | Set to `1` to skip confirmation prompts |
+
+<details>
+<summary><strong>Manual install</strong></summary>
+
+**Prerequisites:** [Git](https://git-scm.com/), [Python 3.13+](https://www.python.org/), [uv](https://docs.astral.sh/uv/), [Node.js 18+](https://nodejs.org/)
 
 ```bash
-# Install
-git clone https://github.com/pufitdev/nerve.git
-cd nerve
+git clone https://github.com/pufitdev/nerve.git && cd nerve
 uv venv --python 3.13 && source .venv/bin/activate
 uv pip install -e .
-
-# Interactive setup — creates config, workspace, and cron jobs
-nerve init                    # Personal mode (default)
-nerve init --mode worker      # Worker mode
-
-# Start
+cd web && npm ci && npm run build && cd ..
+nerve init
 nerve start -f
-
-# Verify
-nerve doctor
 ```
+</details>
 
 **No API key?** Use your Claude subscription instead:
 ```bash

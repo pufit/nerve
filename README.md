@@ -217,7 +217,7 @@ nerve (single Python process)
 ## Quick Start
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/pufitdev/nerve/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/pufit/nerve/main/install.sh | bash
 ```
 
 The installer handles everything — installs dependencies (Python, Node.js, uv), clones the repo, builds the web UI, and launches the interactive setup wizard.
@@ -234,7 +234,7 @@ The installer handles everything — installs dependencies (Python, Node.js, uv)
 **Prerequisites:** [Git](https://git-scm.com/), [Python 3.13+](https://www.python.org/), [uv](https://docs.astral.sh/uv/), [Node.js 18+](https://nodejs.org/)
 
 ```bash
-git clone https://github.com/pufitdev/nerve.git && cd nerve
+git clone https://github.com/pufit/nerve.git && cd nerve
 uv venv --python 3.13 && source .venv/bin/activate
 uv pip install -e .
 cd web && npm ci && npm run build && cd ..

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
 # Nerve Installer
-# https://github.com/pufitdev/nerve
+# https://github.com/pufit/nerve
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/pufitdev/nerve/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/pufit/nerve/main/install.sh | bash
 #
 # Environment variables:
 #   NERVE_INSTALL_DIR  — Where to clone the repo (default: ~/nerve)
@@ -14,7 +14,7 @@
 set -euo pipefail
 
 # --- Configuration ---
-NERVE_REPO="https://github.com/pufitdev/nerve.git"
+NERVE_REPO="https://github.com/pufit/nerve.git"
 NERVE_BRANCH="${NERVE_BRANCH:-main}"
 INSTALL_DIR="${NERVE_INSTALL_DIR:-$HOME/nerve}"
 MIN_PYTHON_MINOR=12
@@ -502,10 +502,10 @@ print_summary() {
 
 usage() {
     cat <<EOF
-Nerve Installer — https://github.com/pufitdev/nerve
+Nerve Installer — https://github.com/pufit/nerve
 
 Usage:
-  curl -fsSL https://raw.githubusercontent.com/pufitdev/nerve/main/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/pufit/nerve/main/install.sh | bash
   curl -fsSL .../install.sh | bash -s -- --yes
 
 Options:

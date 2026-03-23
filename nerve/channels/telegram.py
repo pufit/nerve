@@ -15,6 +15,7 @@ import logging
 import re
 import socket
 import subprocess
+import sys
 import time
 from typing import Any, TYPE_CHECKING
 
@@ -674,7 +675,7 @@ class TelegramChannel(BaseChannel):
         await update.message.reply_text("Restarting Nerve...")
         logger.info("Restart requested by Telegram user %d", update.effective_user.id)
         subprocess.Popen(
-            ["nerve", "restart"],
+            [sys.executable, "-m", "nerve", "restart"],
             start_new_session=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,

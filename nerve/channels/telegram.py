@@ -14,6 +14,7 @@ import html as _html
 import logging
 import re
 import socket
+import subprocess
 import time
 from typing import Any, TYPE_CHECKING
 
@@ -230,6 +231,7 @@ class TelegramChannel(BaseChannel):
         app.add_handler(CommandHandler("sessions", self._handle_sessions))
         app.add_handler(CommandHandler("new", self._handle_new_session))
         app.add_handler(CommandHandler("stop", self._handle_stop))
+        app.add_handler(CommandHandler("restart", self._handle_restart))
         app.add_handler(CommandHandler("reply", self._handle_reply))
         app.add_handler(CallbackQueryHandler(self._handle_callback_query))
         app.add_handler(MessageHandler(
@@ -663,6 +665,20 @@ class TelegramChannel(BaseChannel):
             )
         else:
             await update.message.reply_text("Nothing running to stop.")
+
+    async def _handle_restart(self, update: Update, context: Any) -> None:
+        """Handle /restart — run ``nerve restart`` to restart the daemon."""
+        self._touch()
+        if not self._is_authorized(update.effective_user.id):
+            return
+        await update.message.reply_text("Restarting Nerve...")
+        logger.info("Restart requested by Telegram user %d", update.effective_user.id)
+        subprocess.Popen(
+            ["nerve", "restart"],
+            start_new_session=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
 
     # ------------------------------------------------------------------ #
     #  Message handler — construct InboundMessage and delegate             #

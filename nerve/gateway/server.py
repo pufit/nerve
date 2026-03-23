@@ -24,7 +24,7 @@ from nerve.agent.streaming import broadcaster
 from nerve.config import NerveConfig, get_config
 from nerve.db import Database, init_db, close_db
 from nerve.gateway.auth import authenticate_websocket
-from nerve.gateway.routes import init_routes, router
+from nerve.gateway.routes import init_deps, register_all_routes, set_notification_service
 
 logger = logging.getLogger(__name__)
 
@@ -79,11 +79,10 @@ async def lifespan(app: FastAPI):
     await _engine.initialize()
 
     # Wire up routes
-    init_routes(_engine, db)
+    init_deps(_engine, db)
 
     # Initialize notification service
     from nerve.notifications.service import NotificationService
-    from nerve.gateway.routes import set_notification_service
     from nerve.agent import tools as agent_tools
 
     notification_service = NotificationService(config, db, _engine)
@@ -242,7 +241,7 @@ def create_app() -> FastAPI:
     )
 
     # REST routes
-    app.include_router(router)
+    app.include_router(register_all_routes())
 
     # WebSocket endpoint
     @app.websocket("/ws")

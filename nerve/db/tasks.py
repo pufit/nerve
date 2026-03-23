@@ -193,3 +193,24 @@ class TaskStore:
             (level, reminded_at or now, now, task_id),
         )
         await self.db.commit()
+
+    async def get_task_health_stats(self) -> dict:
+        """Get task and FTS counts for diagnostics (replaces raw sqlite3 calls)."""
+        try:
+            async with self.db.execute("SELECT COUNT(*) FROM tasks") as cur:
+                task_count = (await cur.fetchone())[0]
+            async with self.db.execute("SELECT COUNT(*) FROM tasks_fts") as cur:
+                fts_count = (await cur.fetchone())[0]
+            async with self.db.execute("SELECT COUNT(*) FROM tasks WHERE status != 'done'") as cur:
+                active_count = (await cur.fetchone())[0]
+            async with self.db.execute("SELECT COUNT(*) FROM tasks WHERE status = 'done'") as cur:
+                done_count = (await cur.fetchone())[0]
+            return {
+                "total": task_count,
+                "active": active_count,
+                "done": done_count,
+                "fts_indexed": fts_count,
+                "fts_ok": task_count == fts_count,
+            }
+        except Exception:
+            return {}

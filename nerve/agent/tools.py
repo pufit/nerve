@@ -1707,9 +1707,9 @@ def _get_nerve_asgi_app():
     global _nerve_asgi_app
     if _nerve_asgi_app is None:
         from fastapi import FastAPI
-        from nerve.gateway.routes import router as api_router
+        from nerve.gateway.routes import register_all_routes
         _nerve_asgi_app = FastAPI()
-        _nerve_asgi_app.include_router(api_router)
+        _nerve_asgi_app.include_router(register_all_routes())
     return _nerve_asgi_app
 
 

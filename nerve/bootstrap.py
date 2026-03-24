@@ -196,6 +196,8 @@ class SetupChoices:
     # docker credential forwarding
     claude_oauth_token: str = ""  # OAuth token (from keychain/credentials.json/manual)
     github_token: str = ""  # GitHub PAT (from gh auth token/env)
+    # houseofagents
+    houseofagents_enabled: bool = False
     # worker-specific
     task_description: str = ""
 
@@ -373,6 +375,7 @@ class SetupWizard:
             self._step_channels()
             self._step_sources()
             self._step_crons()
+            self._step_houseofagents()
         else:
             self._step_worker_setup()
         self._step_review()
@@ -1147,6 +1150,39 @@ class SetupWizard:
         )
         click.echo()
 
+    # --- Step: houseofagents (Optional) ---
+
+    def _step_houseofagents(self) -> None:
+        click.clear()
+        click.secho(self._next_step("Multi-Agent Runtime (Optional)"), fg="cyan", bold=True)
+        click.echo()
+        click.secho(
+            "houseofagents is a multi-agent orchestrator that can run\n"
+            "relay, swarm, and pipeline workflows using Claude, OpenAI,\n"
+            "and Gemini agents. When enabled, plan implementations can\n"
+            "use a team of agents instead of a single session.\n",
+            dim=True,
+        )
+        click.secho(
+            "This is optional — you can enable it later in config.yaml.\n"
+            "The binary (~50 MB) downloads on first use, not now.",
+            dim=True,
+        )
+        click.echo()
+
+        self.choices.houseofagents_enabled = click.confirm(
+            "Enable houseofagents multi-agent runtime?",
+            default=False,
+        )
+
+        if self.choices.houseofagents_enabled:
+            click.echo()
+            click.secho("  Binary downloads automatically on first use.", dim=True)
+            click.secho("  -> houseofagents enabled.", fg="green")
+        else:
+            click.secho("  -> Skipped.", dim=True)
+        click.echo()
+
     # --- Step: Review ---
 
     def _step_review(self) -> None:
@@ -1414,6 +1450,14 @@ class SetupWizard:
                 "port": 8317,
             }
 
+        if self.choices.houseofagents_enabled:
+            config["houseofagents"] = {
+                "enabled": True,
+                "default_mode": "relay",
+                "default_agents": ["Claude"],
+                "use_cli": True,
+            }
+
         if self.choices.deployment == "docker":
             config["docker"] = {
                 "extra_mounts": [],  # e.g. ["~/code:/code", "~/projects:/projects"]
@@ -1656,6 +1700,9 @@ def run_non_interactive(config_dir: Path) -> SetupChoices:
         choices.enabled_crons = ["inbox-processor", "task-planner"]
     elif choices.mode == "worker":
         choices.enabled_crons = ["skill-reviser", "skill-extractor", "task-planner"]
+
+    # houseofagents
+    choices.houseofagents_enabled = os.environ.get("NERVE_HOA_ENABLED", "") == "1"
 
     # Worker task description (setup agent runs on first boot, not during init)
     if choices.mode == "worker":

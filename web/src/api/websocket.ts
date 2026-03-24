@@ -24,6 +24,7 @@ export type WSMessage =
   | { type: 'answer_injected'; session_id: string; notification_id: string; title: string; answer: string; answered_by: string; content: string }
   | { type: 'session_running'; session_id: string; is_running: boolean }
   | { type: 'background_tasks_update'; session_id: string; tasks: { task_id: string; label: string; tool: string; status: 'running' | 'done' | 'timeout' }[] }
+  | { type: 'hoa_progress'; session_id: string; event: Record<string, unknown> }
   | { type: 'pong' };
 
 type MessageHandler = (msg: WSMessage) => void;

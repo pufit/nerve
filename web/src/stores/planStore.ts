@@ -30,7 +30,7 @@ interface PlanState {
   setFilter: (f: string) => void;
   loadPlan: (id: string) => Promise<void>;
   updatePlan: (id: string, status: string, feedback?: string) => Promise<void>;
-  approvePlan: (id: string) => Promise<{ impl_session_id: string } | null>;
+  approvePlan: (id: string, options?: { runtime?: string; hoa_mode?: string; hoa_agents?: string[]; hoa_pipeline_id?: string }) => Promise<{ impl_session_id: string } | null>;
   revisePlan: (id: string, feedback: string) => Promise<void>;
   clearSelectedPlan: () => void;
 }
@@ -87,10 +87,10 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     }
   },
 
-  approvePlan: async (id: string) => {
+  approvePlan: async (id: string, options?: { runtime?: string; hoa_mode?: string; hoa_agents?: string[]; hoa_pipeline_id?: string }) => {
     set({ actionLoading: true });
     try {
-      const result = await api.approvePlan(id);
+      const result = await api.approvePlan(id, options);
       // Refresh
       const sel = get().selectedPlan;
       if (sel && sel.id === id) {

@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from nerve.houseofagents.config import HouseOfAgentsConfig
+
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -558,6 +560,7 @@ class NerveConfig:
     notifications: NotificationsConfig = field(default_factory=NotificationsConfig)
     docker: DockerConfig = field(default_factory=DockerConfig)
     proxy: ProxyConfig = field(default_factory=ProxyConfig)
+    houseofagents: HouseOfAgentsConfig = field(default_factory=HouseOfAgentsConfig)
     mcp_servers: list[McpServerConfig] = field(default_factory=list)
 
     # API keys (from config.local.yaml)
@@ -599,6 +602,7 @@ class NerveConfig:
             notifications=NotificationsConfig.from_dict(d.get("notifications", {})),
             docker=DockerConfig.from_dict(d.get("docker", {})),
             proxy=ProxyConfig.from_dict(d.get("proxy", {})),
+            houseofagents=HouseOfAgentsConfig.from_dict(d.get("houseofagents", {})),
             mcp_servers=_parse_mcp_servers(d),
             anthropic_api_key=d.get("anthropic_api_key", ""),
             openai_api_key=d.get("openai_api_key", ""),

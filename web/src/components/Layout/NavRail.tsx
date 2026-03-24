@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MessageSquare, FolderOpen, CheckSquare, Inbox, Activity, Brain, LogOut, Clock, Lightbulb, Sparkles, Bell, Plug } from 'lucide-react';
+import { MessageSquare, FolderOpen, CheckSquare, Inbox, Activity, Brain, LogOut, Clock, Lightbulb, Sparkles, Bell, Plug, Users } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { ws } from '../../api/websocket';
+import { api } from '../../api/client';
 
 const NAV_ITEMS = [
   { path: '/chat', icon: MessageSquare, label: 'Chat' },
@@ -12,6 +13,7 @@ const NAV_ITEMS = [
   { path: '/plans', icon: Lightbulb, label: 'Plans' },
   { path: '/skills', icon: Sparkles, label: 'Skills' },
   { path: '/mcp', icon: Plug, label: 'MCP' },
+  { path: '/houseofagents', icon: Users, label: 'HoA', feature: 'hoa' as const },
   { path: '/notifications', icon: Bell, label: 'Notifs' },
   { path: '/sources', icon: Inbox, label: 'Inbox' },
   { path: '/cron', icon: Clock, label: 'Cron' },
@@ -25,16 +27,25 @@ export function NavRail() {
   const { logout } = useAuthStore();
   const pendingCount = useNotificationStore(s => s.pendingCount);
   const loadNotifications = useNotificationStore(s => s.loadNotifications);
+  const [hoaEnabled, setHoaEnabled] = useState(false);
 
-  // Load notification count on mount
-  useEffect(() => { loadNotifications(); }, []);
+  // Load notification count + feature flags on mount
+  useEffect(() => {
+    loadNotifications();
+    api.getHoaStatus().then(s => setHoaEnabled(s.enabled)).catch(() => {});
+  }, []);
+
+  const visibleItems = NAV_ITEMS.filter(item => {
+    if (item.feature === 'hoa' && !hoaEnabled) return false;
+    return true;
+  });
 
   return (
     <div className="w-14 bg-[#141414] border-r border-[#2a2a2a] flex flex-col items-center py-3 shrink-0">
       <div className="text-[#6366f1] font-bold text-xs mb-4 tracking-wider">N</div>
 
       <div className="flex-1 flex flex-col gap-1">
-        {NAV_ITEMS.map(({ path, icon: Icon, label }) => {
+        {visibleItems.map(({ path, icon: Icon, label }) => {
           const active = location.pathname.startsWith(path);
           const isNotifs = path === '/notifications';
           return (

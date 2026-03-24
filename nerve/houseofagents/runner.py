@@ -31,6 +31,99 @@ class HoARunResult:
         return self.exit_code == 0
 
 
+async def _tail_session_jsonl(
+    inner_session_id: str,
+    nerve_session_id: str,
+    block_label: str,
+    broadcaster: "StreamBroadcaster",
+    workspace: str,
+) -> None:
+    """Tail a claude CLI session JSONL and broadcast tool calls to Nerve UI.
+
+    This is UI-only — the broadcaster sends to WebSocket listeners, not to the
+    SDK agent.  The agent only sees the final hoa_execute tool result.
+    """
+    from nerve.agent.streaming import StreamBroadcaster as _SB  # noqa: F811 — type hint
+
+    # Claude CLI writes session logs to ~/.claude/projects/<encoded-cwd>/<session-id>.jsonl
+    # The cwd is the workspace, encoded as dash-separated path segments.
+    cwd_encoded = workspace.replace("/", "-")
+    if cwd_encoded.startswith("-"):
+        cwd_encoded = cwd_encoded[1:]
+    jsonl_path = Path.home() / ".claude" / "projects" / cwd_encoded / f"{inner_session_id}.jsonl"
+
+    # Wait for the file to appear (claude CLI creates it after init)
+    for _ in range(30):
+        if jsonl_path.exists():
+            break
+        await asyncio.sleep(1)
+    else:
+        logger.debug("JSONL not found for session %s at %s", inner_session_id, jsonl_path)
+        return
+
+    logger.info("Tailing inner session %s → %s", inner_session_id, jsonl_path)
+
+    last_pos = 0
+    while True:
+        try:
+            stat = jsonl_path.stat()
+            if stat.st_size > last_pos:
+                with open(jsonl_path, "r", encoding="utf-8", errors="replace") as f:
+                    f.seek(last_pos)
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            msg = json.loads(line)
+                        except json.JSONDecodeError:
+                            continue
+
+                        # Only forward assistant tool_use entries
+                        if msg.get("type") != "assistant":
+                            continue
+                        content = msg.get("message", {}).get("content", [])
+                        if not isinstance(content, list):
+                            continue
+                        for block in content:
+                            if block.get("type") != "tool_use":
+                                continue
+                            name = block.get("name", "?")
+                            inp = block.get("input", {})
+                            # Build a concise summary
+                            if name == "Bash":
+                                detail = str(inp.get("command", ""))[:120]
+                            elif name in ("Read", "Write", "Edit"):
+                                detail = str(inp.get("file_path", ""))[:100]
+                            elif name in ("Glob", "Grep"):
+                                detail = str(inp.get("pattern", inp.get("path", "")))[:100]
+                            elif name == "Task":
+                                detail = str(inp.get("description", ""))[:80]
+                            else:
+                                detail = str(inp)[:80]
+
+                            await broadcaster.broadcast(nerve_session_id, {
+                                "type": "hoa_progress",
+                                "session_id": nerve_session_id,
+                                "event": {
+                                    "event": "tool_call",
+                                    "label": block_label,
+                                    "agent": "Claude",
+                                    "tool": name,
+                                    "detail": detail,
+                                },
+                            })
+                    last_pos = f.tell()
+        except FileNotFoundError:
+            pass
+        except asyncio.CancelledError:
+            return
+        except Exception as e:
+            logger.debug("JSONL tail error: %s", e)
+
+        await asyncio.sleep(2)
+
+
 class HoARunner:
     """Spawn houseofagents subprocess and stream NDJSON progress to Nerve UI."""
 
@@ -111,6 +204,10 @@ class HoARunner:
             except ImportError:
                 pass
 
+        # Track inner claude session IDs → tail their JSONL for tool-level activity
+        _tailing_sessions: set[str] = set()
+        _tail_tasks: list[asyncio.Task] = []
+
         assert proc.stderr is not None
         async for raw_line in proc.stderr:
             text = raw_line.decode(errors="replace").rstrip()
@@ -121,15 +218,36 @@ class HoARunner:
                 event = json.loads(text)
                 events.append(event)
                 if broadcaster and session_id:
-                    logger.info("HoA progress → session %s: %s", session_id, event.get("event", "?"))
+                    evt_type = event.get("event", "?")
+                    evt_detail = event.get("message", event.get("label", ""))
+                    logger.info("HoA → %s: %s %s", session_id, evt_type, evt_detail)
                     await broadcaster.broadcast(session_id, {
                         "type": "hoa_progress",
                         "session_id": session_id,
                         "event": event,
                     })
+
+                    # Start tailing inner session JSONL when we see a Session ID
+                    msg = event.get("message", "")
+                    if "Session ID:" in msg and broadcaster:
+                        inner_sid = msg.split("Session ID:")[-1].strip()
+                        if inner_sid and inner_sid not in _tailing_sessions:
+                            _tailing_sessions.add(inner_sid)
+                            label = event.get("label", event.get("agent", "?"))
+                            task = asyncio.create_task(
+                                _tail_session_jsonl(
+                                    inner_sid, session_id, label, broadcaster, workspace
+                                )
+                            )
+                            _tail_tasks.append(task)
             except json.JSONDecodeError:
                 # Non-JSON stderr line — just log it
                 logger.debug("hoa stderr: %s", text)
+
+        # Cancel any session tailers when the subprocess exits
+        for t in _tail_tasks:
+            t.cancel()
+        await asyncio.gather(*_tail_tasks, return_exceptions=True)
 
         assert proc.stdout is not None
         stdout_bytes = await proc.stdout.read()

@@ -15,7 +15,7 @@ function getProviderStyle(kind?: string) {
 }
 
 interface HoAEvent {
-  event?: string;     // event type: block_started, block_log, block_finished, etc.
+  event?: string;     // block_started, block_log, block_finished, tool_call, etc.
   agent?: string;
   provider?: string;  // anthropic, openai, gemini
   label?: string;     // pipeline block name (e.g. "Implement", "Review")
@@ -23,6 +23,8 @@ interface HoAEvent {
   iteration?: number;
   loop_pass?: number;
   message?: string;
+  tool?: string;      // inner agent tool name (Read, Bash, Edit, etc.)
+  detail?: string;    // inner agent tool detail (file path, command, etc.)
   [key: string]: unknown;
 }
 
@@ -75,28 +77,38 @@ export function HoAToolBlock({ block }: { block: ToolCallBlockData }) {
           {events.length > 0 && (
             <div className="px-3 py-2 max-h-48 overflow-y-auto">
               <div className="space-y-1">
-                {events.slice(-20).map((event, i) => (
+                {events.slice(-30).map((event, i) => (
                   <div key={i} className="flex items-center gap-2 text-[11px]">
-                    {event.label && (
-                      <span className="px-1.5 py-0.5 rounded bg-[#2a2a2a] text-[#aaa] border border-[#333] text-[10px]">
-                        {event.label}
-                      </span>
-                    )}
-                    {event.agent && (
-                      <span className={`px-1.5 py-0.5 rounded border text-[10px] ${getProviderStyle(event.provider)}`}>
-                        {event.agent}
-                      </span>
-                    )}
-                    {event.iteration !== undefined && (
-                      <span className="text-[#555]">iter {event.iteration}</span>
-                    )}
-                    {event.message && (
-                      <span className="text-[#777] truncate">{event.message}</span>
-                    )}
-                    {!event.message && !event.agent && !event.label && (
-                      <span className="text-[#555] font-mono truncate">
-                        {JSON.stringify(event).slice(0, 80)}
-                      </span>
+                    {/* Tool call from inner agent — special rendering */}
+                    {event.event === 'tool_call' ? (
+                      <>
+                        <span className="text-[#555] font-mono">{event.tool}</span>
+                        <span className="text-[#666] font-mono truncate">{event.detail}</span>
+                      </>
+                    ) : (
+                      <>
+                        {event.label && event.event !== 'block_log' && (
+                          <span className="px-1.5 py-0.5 rounded bg-[#2a2a2a] text-[#aaa] border border-[#333] text-[10px]">
+                            {event.label}
+                          </span>
+                        )}
+                        {event.agent && event.event !== 'block_log' && (
+                          <span className={`px-1.5 py-0.5 rounded border text-[10px] ${getProviderStyle(event.provider)}`}>
+                            {event.agent}
+                          </span>
+                        )}
+                        {event.iteration !== undefined && event.event !== 'block_log' && (
+                          <span className="text-[#555]">iter {event.iteration}</span>
+                        )}
+                        {event.message && (
+                          <span className="text-[#777] truncate">{event.message}</span>
+                        )}
+                        {!event.message && !event.agent && !event.label && (
+                          <span className="text-[#555] font-mono truncate">
+                            {JSON.stringify(event).slice(0, 80)}
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                 ))}

@@ -29,6 +29,18 @@ class NotificationService:
         self.config = config
         self.db = db
         self.engine = engine
+        self._hide_session_label: set[str] = set()  # Session ID prefixes that suppress the label
+
+    def hide_session_label_for(self, session_prefix: str) -> None:
+        """Register a session ID (or prefix) that should not show the session label."""
+        self._hide_session_label.add(session_prefix)
+
+    def _should_show_session_label(self, session_id: str) -> bool:
+        """Check whether the session label should be appended to this notification."""
+        for prefix in self._hide_session_label:
+            if session_id == prefix or session_id.startswith(prefix + ":"):
+                return False
+        return True
 
     # ------------------------------------------------------------------ #
     #  Core API (called by MCP tools)                                      #
@@ -324,23 +336,52 @@ class NotificationService:
         if not chat_id:
             return None
 
-        # Build message text (plain text — avoids Markdown parse failures)
-        priority_prefix = {"high": "\u26a0\ufe0f ", "urgent": "\U0001f6a8 "}.get(priority, "")
-        text = f"{priority_prefix}{title}"
-        if body:
-            text += f"\n\n{body}"
-        text += f"\n\nSession: {session_id}"
+        # Build message text
+        priority_prefix = self.config.notifications.priority_prefixes.get(priority, "")
+        if title:
+            text = f"{priority_prefix}{title}"
+            if body:
+                text += f"\n\n{body}"
+        else:
+            text = body or ""
+        if self._should_show_session_label(session_id):
+            text += f"\n\nSession: {session_id}"
 
         if notif_type == "question" and options:
             return await self._send_telegram_inline(
                 chat_id, notification_id, text, options, silent=silent,
             )
         else:
-            msg = await bot.send_message(
-                chat_id=chat_id, text=text,
+            msg = await self._send_telegram_html(bot, chat_id, text, silent=silent)
+            return str(msg.message_id)
+
+    @staticmethod
+    async def _send_telegram_html(
+        bot: object,
+        chat_id: int,
+        text: str,
+        *,
+        reply_markup: object | None = None,
+        silent: bool = False,
+    ) -> object:
+        """Send a message with markdown→HTML conversion and plain-text fallback."""
+        from nerve.channels.telegram import _md_to_tg_html
+        from telegram.constants import ParseMode
+
+        html_text = _md_to_tg_html(text)
+        try:
+            return await bot.send_message(
+                chat_id=chat_id, text=html_text,
+                parse_mode=ParseMode.HTML,
+                reply_markup=reply_markup,
                 disable_notification=silent,
             )
-            return str(msg.message_id)
+        except Exception:
+            return await bot.send_message(
+                chat_id=chat_id, text=text,
+                reply_markup=reply_markup,
+                disable_notification=silent,
+            )
 
     async def _send_telegram_inline(
         self,
@@ -369,11 +410,8 @@ class NotificationService:
 
         keyboard = InlineKeyboardMarkup(buttons)
 
-        msg = await bot.send_message(
-            chat_id=chat_id,
-            text=text,
-            reply_markup=keyboard,
-            disable_notification=silent,
+        msg = await self._send_telegram_html(
+            bot, chat_id, text, reply_markup=keyboard, silent=silent,
         )
 
         await self.db.update_notification(

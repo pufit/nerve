@@ -31,6 +31,7 @@ class CronJob:
     enabled: bool = True
     skip_when_idle: list[str] = field(default_factory=list)  # Source names to check; skip run if no new messages
     idle_consumer: str = "inbox"  # Consumer cursor name for the idle check
+    show_session_label: bool = True  # Show "Session: ..." in notification messages
     metadata: dict = field(default_factory=dict)
 
     @classmethod
@@ -49,6 +50,7 @@ class CronJob:
             enabled=d.get("enabled", True),
             skip_when_idle=d.get("skip_when_idle", []),
             idle_consumer=d.get("idle_consumer", "inbox"),
+            show_session_label=d.get("show_session_label", True),
             metadata=d.get("metadata", {}),
         )
 
@@ -100,6 +102,7 @@ def save_jobs(jobs: list[CronJob], jobs_file: Path) -> None:
             "enabled": job.enabled,
             "skip_when_idle": job.skip_when_idle,
             "idle_consumer": job.idle_consumer,
+            "show_session_label": job.show_session_label,
             "metadata": job.metadata,
         })
 

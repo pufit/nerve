@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from nerve.utils.time import utc_now_iso
 
 
 class CronStore:
@@ -19,7 +19,7 @@ class CronStore:
     async def log_cron_finish(
         self, log_id: int, status: str, output: str | None = None, error: str | None = None
     ) -> None:
-        now = datetime.now(timezone.utc).isoformat()
+        now = utc_now_iso()
         await self.db.execute(
             "UPDATE cron_logs SET finished_at = ?, status = ?, output = ?, error = ? WHERE id = ?",
             (now, status, output, error, log_id),

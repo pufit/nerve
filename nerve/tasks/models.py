@@ -27,6 +27,7 @@ class Task:
     source: str = "manual"
     source_url: str = ""
     deadline: str = ""
+    tags: list[str] = field(default_factory=list)
     created_at: str = ""
     updated_at: str = ""
     escalation_level: int = 0
@@ -35,6 +36,7 @@ class Task:
 
     @classmethod
     def from_db_row(cls, row: dict) -> Task:
+        raw_tags = row.get("tags", "") or ""
         return cls(
             id=row["id"],
             title=row["title"],
@@ -43,6 +45,7 @@ class Task:
             source=row.get("source", "manual"),
             source_url=row.get("source_url", ""),
             deadline=row.get("deadline", ""),
+            tags=parse_tags_string(raw_tags),
             created_at=row.get("created_at", ""),
             updated_at=row.get("updated_at", ""),
             escalation_level=row.get("escalation_level", 0),
@@ -58,11 +61,24 @@ class Task:
             "source": self.source,
             "source_url": self.source_url,
             "deadline": self.deadline,
+            "tags": self.tags,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "escalation_level": self.escalation_level,
             "last_reminded_at": self.last_reminded_at,
         }
+
+
+def parse_tags_string(raw: str) -> list[str]:
+    """Parse a comma-separated tags string into a sorted, deduplicated list."""
+    if not raw:
+        return []
+    return sorted({t.strip().lower() for t in raw.split(",") if t.strip()})
+
+
+def tags_to_string(tags: list[str]) -> str:
+    """Convert a list of tags to a comma-separated string for DB storage."""
+    return ",".join(sorted({t.strip().lower() for t in tags if t.strip()}))
 
 
 def parse_task_frontmatter(content: str) -> dict[str, str]:

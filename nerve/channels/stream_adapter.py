@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from typing import Any
 
 from nerve.channels.base import (
@@ -20,7 +21,7 @@ from nerve.channels.base import (
 
 logger = logging.getLogger(__name__)
 
-STREAMING_INDICATOR = "\n\n⏳"
+STREAMING_INDICATOR = "\n\n⏳⏳⏳"
 
 
 class StreamAdapter:
@@ -126,13 +127,14 @@ class StreamAdapter:
         if now - self._last_edit < self._edit_interval:
             return  # Rate limited
 
-        if not self._buffer.strip():
+        display = self._normalize_text(self._buffer)
+        if not display:
             return
 
         async with self._edit_lock:
             try:
                 indicator = STREAMING_INDICATOR
-                display = self._truncate(self._buffer, reserve=len(indicator))
+                display = self._truncate(display, reserve=len(indicator))
                 await self.channel.edit_message(
                     self.target, self._placeholder_id, display + indicator,
                 )
@@ -145,7 +147,7 @@ class StreamAdapter:
             # Send final text as a new message (triggers notification),
             # then delete the streaming placeholder.
             async with self._edit_lock:
-                text = self._buffer.strip() or "(no response)"
+                text = self._normalize_text(self._buffer) or "(no response)"
                 formatted = self.channel.format_response(text)
                 placeholder_id = self._placeholder_id
                 try:
@@ -170,8 +172,9 @@ class StreamAdapter:
                     pass  # Duplicate is better than lost response
         elif not self._supports_streaming:
             # Non-streaming channel: send the accumulated response as one message
-            if self._buffer.strip():
-                formatted = self.channel.format_response(self._buffer)
+            text = self._normalize_text(self._buffer)
+            if text:
+                formatted = self.channel.format_response(text)
                 await self.channel.send(OutboundMessage(
                     target=self.target,
                     text=formatted,
@@ -222,6 +225,13 @@ class StreamAdapter:
     # ------------------------------------------------------------------ #
     #  Helpers                                                             #
     # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _normalize_text(text: str) -> str:
+        """Strip leading/trailing whitespace and collapse excessive blank lines."""
+        text = text.strip()
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        return text
 
     def _truncate(self, text: str, reserve: int = 0) -> str:
         """Truncate text to max message length if constrained.

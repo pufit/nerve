@@ -113,6 +113,11 @@ async def lifespan(app: FastAPI):
         # Wire notification service to source runners for health alerts
         for runner in cron._source_runners:
             runner.set_notification_service(notification_service)
+
+        # Register cron jobs that suppress the session label in notifications
+        for job in cron._jobs:
+            if not job.show_session_label:
+                notification_service.hide_session_label_for(f"cron:{job.id}")
     except Exception as e:
         logger.warning("Cron service failed to start: %s", e)
 

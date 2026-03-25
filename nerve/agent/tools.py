@@ -85,6 +85,7 @@ def _done_dir() -> Path:
     {
         "query": {"type": "string", "description": "Search keyword(s) to match in task titles"},
         "status": {"type": "string", "description": "Filter: 'all' (include done), specific status, or empty (open tasks only)", "default": ""},
+        "tag": {"type": "string", "description": "Filter by tag name (exact match)", "default": ""},
     },
 )
 async def task_search(args: dict) -> dict:
@@ -98,8 +99,10 @@ async def task_search(args: dict) -> dict:
     else:
         status = raw_status  # specific: pending, in_progress, done, deferred
 
+    tag = (args.get("tag", "") or "").strip().lower()
+
     if _db:
-        tasks = await _db.search_tasks(query=query, status=status)
+        tasks = await _db.search_tasks(query=query, status=status, tag=tag or None)
     else:
         tasks = []
 
@@ -108,8 +111,9 @@ async def task_search(args: dict) -> dict:
 
     lines = []
     for t in tasks:
+        tags_str = f" [{t['tags']}]" if t.get("tags") else ""
         deadline_str = f" (due: {t['deadline']})" if t.get("deadline") else ""
-        lines.append(f"- [{t['status']}] {t['title']}{deadline_str} — {t['id']}")
+        lines.append(f"- [{t['status']}]{tags_str} {t['title']}{deadline_str} — {t['id']}")
 
     return {"content": [{"type": "text", "text": f"Found {len(tasks)} task(s) matching '{query}':\n" + "\n".join(lines)}]}
 
@@ -139,15 +143,20 @@ async def _find_duplicate_tasks(title: str, source_url: str = "") -> list[dict]:
         "source": {"type": "string", "description": "Where this task came from (telegram, github, gmail, manual)", "default": "manual"},
         "source_url": {"type": "string", "description": "URL to the source (PR, email, etc.)", "default": ""},
         "deadline": {"type": "string", "description": "Deadline in YYYY-MM-DD format", "default": ""},
+        "tags": {"type": "string", "description": "Comma-separated tags (e.g. 'urgent,backend,bug')", "default": ""},
         "confirm_duplicate": {"type": "boolean", "description": "Set to true to force creation even when duplicates exist", "default": False},
     },
 )
 async def task_create(args: dict) -> dict:
+    from nerve.tasks.models import parse_tags_string, tags_to_string
+
     title = args["title"]
     content = args.get("content", "")
     source = args.get("source", "manual")
     source_url = args.get("source_url", "")
     deadline = args.get("deadline", "")
+    raw_tags = args.get("tags", "")
+    tags = parse_tags_string(raw_tags)
     confirm = args.get("confirm_duplicate", False)
 
     # Duplicate check (skip if explicitly confirmed)
@@ -171,6 +180,8 @@ async def task_create(args: dict) -> dict:
         md_parts.append(f"**Source:** {source_url}")
     if deadline:
         md_parts.append(f"**Deadline:** {deadline}")
+    if tags:
+        md_parts.append(f"**Tags:** {', '.join(tags)}")
     md_parts.append(f"\n{content}\n")
     md_parts.append("\n## Updates\n")
     md_parts.append(f"- {datetime.now(timezone.utc).strftime('%Y-%m-%d')}: Created")
@@ -188,6 +199,7 @@ async def task_create(args: dict) -> dict:
             source=source,
             source_url=source_url or None,
             deadline=deadline or None,
+            tags=tags_to_string(tags),
             content=content,
         )
 
@@ -197,9 +209,10 @@ async def task_create(args: dict) -> dict:
 
 @tool(
     "task_list",
-    "List tasks with optional status filter.",
+    "List tasks with optional status and tag filters.",
     {
         "status": {"type": "string", "description": "Filter: 'pending', 'in_progress', 'done', 'deferred', 'open' (all non-done), or 'all' (everything). Default (empty) = all non-done.", "default": ""},
+        "tag": {"type": "string", "description": "Filter by tag name (exact match)", "default": ""},
         "limit": {"type": "number", "description": "Max results", "default": 20},
     },
 )
@@ -213,10 +226,11 @@ async def task_list(args: dict) -> dict:
     else:
         status = raw_status  # specific: pending, in_progress, done, deferred
 
+    tag = (args.get("tag", "") or "").strip().lower()
     limit = int(args.get("limit", 20))
 
     if _db:
-        tasks = await _db.list_tasks(status=status, limit=limit)
+        tasks = await _db.list_tasks(status=status, tag=tag or None, limit=limit)
     else:
         tasks = []
 
@@ -225,27 +239,33 @@ async def task_list(args: dict) -> dict:
 
     lines = []
     for t in tasks:
+        tags_str = f" [{t['tags']}]" if t.get("tags") else ""
         deadline_str = f" (due: {t['deadline']})" if t.get("deadline") else ""
-        lines.append(f"- [{t['status']}] {t['title']}{deadline_str} — {t['id']}")
+        lines.append(f"- [{t['status']}]{tags_str} {t['title']}{deadline_str} — {t['id']}")
 
     return {"content": [{"type": "text", "text": "\n".join(lines)}]}
 
 
 @tool(
     "task_update",
-    "Update a task's status, deadline, or add an update note.",
+    "Update a task's status, deadline, tags, or add an update note.",
     {
         "task_id": {"type": "string", "description": "Task ID"},
         "status": {"type": "string", "description": "New status: pending, in_progress, done, deferred", "default": ""},
         "note": {"type": "string", "description": "Update note to append to the task file", "default": ""},
         "deadline": {"type": "string", "description": "New deadline in YYYY-MM-DD format", "default": ""},
+        "tags": {"type": "string", "description": "Replace tags (comma-separated). Use '+tag' to add, '-tag' to remove, or 'tag1,tag2' to set.", "default": ""},
     },
 )
 async def task_update(args: dict) -> dict:
+    import re as _re
+    from nerve.tasks.models import parse_tags_string, tags_to_string
+
     task_id = args["task_id"]
     status = args.get("status", "")
     note = args.get("note", "")
     deadline = args.get("deadline", "")
+    raw_tags = (args.get("tags", "") or "").strip()
 
     # Route done transitions through task_done to ensure file move + FTS sync
     if status == "done":
@@ -259,8 +279,27 @@ async def task_update(args: dict) -> dict:
         if status:
             await _db.update_task_status(task_id, status)
 
+        # Resolve new tags
+        new_tags_str = ""
+        if raw_tags:
+            current_tags = set(parse_tags_string(task.get("tags", "") or ""))
+            if raw_tags.startswith("+") or raw_tags.startswith("-"):
+                # Incremental: "+urgent,-backend,+bug"
+                for part in raw_tags.split(","):
+                    part = part.strip()
+                    if part.startswith("+"):
+                        current_tags.add(part[1:].strip().lower())
+                    elif part.startswith("-"):
+                        current_tags.discard(part[1:].strip().lower())
+                new_tags_str = tags_to_string(list(current_tags))
+            else:
+                # Full replace
+                new_tags_str = tags_to_string(parse_tags_string(raw_tags))
+
+            await _db.update_task_tags(task_id, new_tags_str)
+
         # Update the markdown file
-        if _workspace and (note or deadline):
+        if _workspace and (note or deadline or raw_tags):
             file_path = _workspace / task["file_path"]
             if file_path.exists():
                 content = file_path.read_text(encoding="utf-8")
@@ -268,12 +307,25 @@ async def task_update(args: dict) -> dict:
                     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
                     content += f"\n- {today}: {note}"
                 if deadline:
-                    # Update or add deadline in frontmatter
                     if "**Deadline:**" in content:
-                        import re
-                        content = re.sub(r"\*\*Deadline:\*\* .*", f"**Deadline:** {deadline}", content)
+                        content = _re.sub(r"\*\*Deadline:\*\* .*", f"**Deadline:** {deadline}", content)
                     else:
                         content = content.replace("\n\n", f"\n**Deadline:** {deadline}\n\n", 1)
+                if raw_tags:
+                    display_tags = ", ".join(parse_tags_string(new_tags_str))
+                    if "**Tags:**" in content:
+                        content = _re.sub(r"\*\*Tags:\*\* .*", f"**Tags:** {display_tags}", content)
+                    else:
+                        # Insert after last frontmatter line (Source/Deadline) before content
+                        content = _re.sub(
+                            r"(\*\*(?:Source|Deadline):\*\* [^\n]*\n)",
+                            rf"\1**Tags:** {display_tags}\n",
+                            content,
+                            count=1,
+                        )
+                        if "**Tags:**" not in content:
+                            # No other frontmatter — insert after title
+                            content = content.replace("\n\n", f"\n**Tags:** {display_tags}\n\n", 1)
                 file_path.write_text(content, encoding="utf-8")
 
     return {"content": [{"type": "text", "text": f"Task {task_id} updated."}]}
@@ -336,11 +388,12 @@ async def task_write(args: dict) -> dict:
     file_path = _workspace / task["file_path"]
     file_path.write_text(new_content, encoding="utf-8")
 
-    # Re-parse title and deadline from the new content for DB sync
-    from nerve.tasks.models import parse_task_frontmatter, parse_task_title
+    # Re-parse title, deadline, and tags from the new content for DB sync
+    from nerve.tasks.models import parse_task_frontmatter, parse_task_title, tags_to_string, parse_tags_string
     new_title = parse_task_title(new_content) or task["title"]
     frontmatter = parse_task_frontmatter(new_content)
     new_deadline = frontmatter.get("deadline", task.get("deadline", ""))
+    new_tags = tags_to_string(parse_tags_string(frontmatter.get("tags", task.get("tags", ""))))
 
     await _db.upsert_task(
         task_id=task_id,
@@ -350,6 +403,7 @@ async def task_write(args: dict) -> dict:
         source=task.get("source"),
         source_url=task.get("source_url"),
         deadline=new_deadline or None,
+        tags=new_tags,
         content=new_content,
     )
 
@@ -1563,7 +1617,7 @@ async def _notify_impl(args: dict, session_id: str) -> dict:
     if not _notification_service:
         return {"content": [{"type": "text", "text": "Notification service not available."}]}
 
-    title = args["title"]
+    title = args.get("title", "")
     body = args.get("body", "")
     priority = args.get("priority", "normal")
 
@@ -1639,6 +1693,24 @@ async def _react_impl(args: dict, session_id: str) -> dict:
     except Exception as e:
         logger.error("react tool failed: %s", e)
         return {"content": [{"type": "text", "text": f"Failed to set reaction: {e}"}]}
+
+
+async def _send_sticker_impl(args: dict, session_id: str) -> dict:
+    """Core implementation for the send_sticker tool."""
+    if not _engine:
+        return {"content": [{"type": "text", "text": "Engine not available."}]}
+
+    sticker = args["sticker"]
+
+    try:
+        success = await _engine.router.send_sticker(session_id, sticker)
+        if success:
+            return {"content": [{"type": "text", "text": "Sticker sent."}]}
+        else:
+            return {"content": [{"type": "text", "text": "Cannot send sticker: no message context or channel does not support stickers."}]}
+    except Exception as e:
+        logger.error("send_sticker tool failed: %s", e)
+        return {"content": [{"type": "text", "text": f"Failed to send sticker: {e}"}]}
 
 
 _nerve_asgi_app = None  # Cached mini FastAPI app for in-process API calls
@@ -1740,17 +1812,58 @@ async def mcp_reload(args: dict) -> dict:
         return {"content": [{"type": "text", "text": f"Reload failed: {e}"}]}
 
 
+# Notification tool schemas — shared between module-level and session-scoped definitions.
+# Must be proper JSON Schema (with "type"/"properties"/"required") so the SDK
+# preserves them as-is instead of converting and marking everything required.
+_NOTIFY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "title": {"type": "string", "description": "Optional short heading. Omit or leave empty for regular notifications.", "default": ""},
+        "body": {"type": "string", "description": "Notification body with details (markdown supported)"},
+        "priority": {"type": "string", "description": "Priority level: 'low', 'normal', 'high', 'urgent'. Default: 'normal'", "default": "normal"},
+    },
+    "required": ["body"],
+}
+
+_ASK_USER_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "title": {"type": "string", "description": "The question to ask"},
+        "body": {"type": "string", "description": "Additional context for the question (markdown supported)", "default": ""},
+        "options": {"type": "string", "description": "Predefined answer options (shown as buttons). Comma-separated string or JSON array. Optional — user can always type free text.", "default": ""},
+        "wait": {"type": "string", "description": "If 'true', block agent execution until user answers. Default: 'false' (async).", "default": "false"},
+        "priority": {"type": "string", "description": "Priority: 'low', 'normal', 'high', 'urgent'. Default: 'normal'", "default": "normal"},
+    },
+    "required": ["title"],
+}
+
+_REACT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "emoji": {"type": "string", "description": "Emoji to react with (e.g., '👍', '❤', '🔥', '😂')"},
+    },
+    "required": ["emoji"],
+}
+
+_SEND_STICKER_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "sticker": {
+            "type": "string",
+            "description": "Telegram sticker file_id. Included in [Sticker: ..., file_id: ...] when users send stickers.",
+        },
+    },
+    "required": ["sticker"],
+}
+
+
 # Module-level tool definitions — used only for ALL_TOOLS reference.
 # Actual session-scoped tools are created by create_session_mcp_server().
 @tool(
     "notify",
     "Send an async notification to the user. Fire-and-forget — does not wait for a response. "
     "Use for status updates, completion alerts, reminders, or any message that doesn't need a reply.",
-    {
-        "title": {"type": "string", "description": "Short notification title (shown as heading)"},
-        "body": {"type": "string", "description": "Optional notification body with details (markdown supported)", "default": ""},
-        "priority": {"type": "string", "description": "Priority level: 'low', 'normal', 'high', 'urgent'. Default: 'normal'", "default": "normal"},
-    },
+    _NOTIFY_SCHEMA,
 )
 async def notify(args: dict) -> dict:
     """Send a fire-and-forget notification (fallback — uses deprecated global)."""
@@ -1762,13 +1875,22 @@ async def notify(args: dict) -> dict:
     "Set an emoji reaction on the user's last message. "
     "Use to acknowledge messages, express emotions, or respond non-verbally. "
     "Works on channels that support reactions (e.g., Telegram).",
-    {
-        "emoji": {"type": "string", "description": "Emoji to react with (e.g., '👍', '❤', '🔥', '😂')"},
-    },
+    _REACT_SCHEMA,
 )
 async def react_tool(args: dict) -> dict:
     """Set a reaction (fallback — uses deprecated global)."""
     return await _react_impl(args, _current_session_id)
+
+
+@tool(
+    "send_sticker",
+    "Send a Telegram sticker to the current chat. "
+    "Use the file_id received when a user sends you a sticker.",
+    _SEND_STICKER_SCHEMA,
+)
+async def send_sticker_tool(args: dict) -> dict:
+    """Send a sticker (fallback — uses deprecated global)."""
+    return await _send_sticker_impl(args, _current_session_id)
 
 
 @tool(
@@ -1777,13 +1899,7 @@ async def react_tool(args: dict) -> dict:
     "Returns immediately — when the user answers, their reply is "
     "automatically injected into this session. "
     "Use predefined options for quick answers (rendered as buttons), or the user can type a free-text reply.",
-    {
-        "title": {"type": "string", "description": "The question to ask"},
-        "body": {"type": "string", "description": "Additional context for the question (markdown supported)", "default": ""},
-        "options": {"type": "string", "description": "Predefined answer options (shown as buttons). Comma-separated string or JSON array. Optional — user can always type free text.", "default": ""},
-        "wait": {"type": "string", "description": "If 'true', block agent execution until user answers. Default: 'false' (async).", "default": "false"},
-        "priority": {"type": "string", "description": "Priority: 'low', 'normal', 'high', 'urgent'. Default: 'normal'", "default": "normal"},
-    },
+    _ASK_USER_SCHEMA,
 )
 async def ask_user_tool(args: dict) -> dict:
     """Ask the user a question asynchronously (fallback — uses deprecated global)."""
@@ -1903,26 +2019,6 @@ def create_nerve_mcp_server():
     )
 
 
-# Notification tool schemas — shared between module-level and session-scoped definitions
-_NOTIFY_SCHEMA = {
-    "title": {"type": "string", "description": "Short notification title (shown as heading)"},
-    "body": {"type": "string", "description": "Optional notification body with details (markdown supported)", "default": ""},
-    "priority": {"type": "string", "description": "Priority level: 'low', 'normal', 'high', 'urgent'. Default: 'normal'", "default": "normal"},
-}
-
-_ASK_USER_SCHEMA = {
-    "title": {"type": "string", "description": "The question to ask"},
-    "body": {"type": "string", "description": "Additional context for the question (markdown supported)", "default": ""},
-    "options": {"type": "string", "description": "Predefined answer options (shown as buttons). Comma-separated string or JSON array. Optional — user can always type free text.", "default": ""},
-    "wait": {"type": "string", "description": "If 'true', block agent execution until user answers. Default: 'false' (async).", "default": "false"},
-    "priority": {"type": "string", "description": "Priority: 'low', 'normal', 'high', 'urgent'. Default: 'normal'", "default": "normal"},
-}
-
-_REACT_SCHEMA = {
-    "emoji": {"type": "string", "description": "Emoji to react with (e.g., '👍', '❤', '🔥', '😂')"},
-}
-
-
 def create_session_mcp_server(session_id: str):
     """Create an MCP server with session_id bound for session-scoped tools.
 
@@ -1962,6 +2058,16 @@ def create_session_mcp_server(session_id: str):
     async def session_react(args: dict) -> dict:
         # session_id captured from enclosing scope — race-free
         return await _react_impl(args, session_id)
+
+    @tool(
+        "send_sticker",
+        "Send a Telegram sticker to the current chat. "
+        "Use the file_id received when a user sends you a sticker.",
+        _SEND_STICKER_SCHEMA,
+    )
+    async def session_send_sticker(args: dict) -> dict:
+        # session_id captured from enclosing scope — race-free
+        return await _send_sticker_impl(args, session_id)
 
     # --- houseofagents session-scoped tool (needs session_id for streaming) ---
 
@@ -2036,8 +2142,8 @@ def create_session_mcp_server(session_id: str):
             return _hoa_text("\n\n".join(parts))
 
     # Shared tools (don't need session context) + session-scoped tools
-    shared_tools = [t for t in ALL_TOOLS if t.name not in ("notify", "ask_user", "react")]
-    session_tools: list[SdkMcpTool] = [session_notify, session_ask_user, session_react]
+    shared_tools = [t for t in ALL_TOOLS if t.name not in ("notify", "ask_user", "react", "send_sticker")]
+    session_tools: list[SdkMcpTool] = [session_notify, session_ask_user, session_react, session_send_sticker]
 
     # Only include houseofagents tools when enabled — saves context tokens otherwise
     hoa_enabled = _config and _config.houseofagents.enabled

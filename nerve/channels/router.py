@@ -84,14 +84,18 @@ class ChannelRouter:
     #  Inbound: channel → engine                                           #
     # ------------------------------------------------------------------ #
 
+    # Debounce window (seconds) for collecting simultaneous messages
+    # (e.g. forwarded messages, rapid-fire sends) into a single batch.
+    BATCH_DEBOUNCE = 0.15
+
     async def handle_message(self, msg: InboundMessage) -> str:
         """Process an inbound user message.
 
-        Messages for the same session are serialized via a per-session lock.
-        If a session is already busy, arriving messages are queued and
-        processed together as a single batched turn once the current run
-        finishes.  This avoids "Session already running" errors and lets
-        rapid-fire or forwarded messages be handled as a group.
+        Messages for the same session are always queued first.  A short
+        debounce window collects simultaneous messages (e.g. forwarded
+        messages or rapid-fire sends) so they are processed as a single
+        batched turn.  Messages that arrive while the engine is busy are
+        queued for the next batch.
 
         Called by channel implementations when they receive a user message.
         """
@@ -119,30 +123,33 @@ class ChannelRouter:
                 "message_id": msg_id,
             }
 
-        # If the session is busy, queue for batch processing instead of
-        # setting up a streaming adapter that would never be used.
+        # Queue the message; a Future carries the result back to the caller.
+        future: asyncio.Future[str] = asyncio.get_running_loop().create_future()
+        self._pending_batches.setdefault(session_id, []).append(
+            (msg, future),
+        )
+
+        # If the session is already busy, the message is queued —
+        # the driver coroutine will include it in the next batch.
         lock = self._session_locks.setdefault(session_id, asyncio.Lock())
         if lock.locked():
-            future: asyncio.Future[str] = asyncio.get_running_loop().create_future()
-            self._pending_batches.setdefault(session_id, []).append(
-                (msg, future),
-            )
             return await future
 
+        # We're the driver — acquire the lock and process batches.
         async with lock:
-            try:
-                response = await self._run_single(channel, msg, session_id)
-            except (asyncio.CancelledError, Exception):
-                # Current run failed/cancelled — cancel all pending futures
-                self._cancel_pending(session_id)
-                raise
+            # Short debounce to collect simultaneous messages.
+            await asyncio.sleep(self.BATCH_DEBOUNCE)
 
-            # Drain messages that arrived while we were busy
             while pending := self._pending_batches.pop(session_id, None):
                 try:
-                    batch_response = await self._run_batch(
-                        channel, pending, session_id,
-                    )
+                    if len(pending) == 1:
+                        response = await self._run_single(
+                            channel, pending[0][0], session_id,
+                        )
+                    else:
+                        response = await self._run_batch(
+                            channel, pending, session_id,
+                        )
                 except asyncio.CancelledError:
                     for _, fut in pending:
                         if not fut.done():
@@ -156,9 +163,9 @@ class ChannelRouter:
                 else:
                     for _, fut in pending:
                         if not fut.done():
-                            fut.set_result(batch_response)
+                            fut.set_result(response)
 
-            return response
+        return await future
 
     # ------------------------------------------------------------------ #
     #  Internal run helpers                                                #
@@ -291,6 +298,27 @@ class ChannelRouter:
             return False
 
         await channel.set_reaction(ctx["target"], ctx["message_id"], emoji)
+        return True
+
+    # ------------------------------------------------------------------ #
+    #  Stickers                                                             #
+    # ------------------------------------------------------------------ #
+
+    async def send_sticker(self, session_id: str, sticker: str) -> bool:
+        """Send a sticker to the chat associated with a session.
+
+        Returns True if the sticker was sent, False if no context or
+        the channel does not support stickers.
+        """
+        ctx = self._message_context.get(session_id)
+        if not ctx:
+            return False
+
+        channel = self._channels.get(ctx["channel_name"])
+        if not channel or not hasattr(channel, "send_sticker"):
+            return False
+
+        await channel.send_sticker(ctx["target"], sticker)
         return True
 
     # ------------------------------------------------------------------ #

@@ -17,24 +17,26 @@ class TaskStore:
         source: str | None = None,
         source_url: str | None = None,
         deadline: str | None = None,
+        tags: str = "",
         content: str = "",
     ) -> None:
         now = datetime.now(timezone.utc).isoformat()
         async with self._atomic():
             await self.db.execute(
-                """INSERT INTO tasks (id, file_path, title, status, source, source_url, deadline, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """INSERT INTO tasks (id, file_path, title, status, source, source_url, deadline, tags, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                    ON CONFLICT(id) DO UPDATE SET
                        file_path=excluded.file_path, title=excluded.title, status=excluded.status,
                        source=excluded.source, source_url=excluded.source_url,
-                       deadline=excluded.deadline, updated_at=?""",
-                (task_id, file_path, title, status, source, source_url, deadline, now, now, now),
+                       deadline=excluded.deadline, tags=excluded.tags, updated_at=?""",
+                (task_id, file_path, title, status, source, source_url, deadline, tags, now, now, now),
             )
-            # Sync FTS index
+            # Sync FTS index — include tags so tag names are searchable
+            fts_content = f"{content} {tags.replace(',', ' ')}" if tags else content
             await self.db.execute("DELETE FROM tasks_fts WHERE task_id = ?", (task_id,))
             await self.db.execute(
                 "INSERT INTO tasks_fts (task_id, title, content) VALUES (?, ?, ?)",
-                (task_id, title, content),
+                (task_id, title, fts_content),
             )
 
     async def get_task(self, task_id: str) -> dict | None:
@@ -42,17 +44,29 @@ class TaskStore:
             row = await cursor.fetchone()
             return dict(row) if row else None
 
-    async def list_tasks(self, status: str | None = None, limit: int = 100) -> list[dict]:
+    async def list_tasks(self, status: str | None = None, tag: str | None = None, limit: int = 100) -> list[dict]:
+        conditions: list[str] = []
+        params: list = []
+
         if status == "all":
-            query = "SELECT * FROM tasks ORDER BY deadline ASC NULLS LAST, created_at DESC LIMIT ?"
-            params = (limit,)
+            pass
         elif status:
-            query = "SELECT * FROM tasks WHERE status = ? ORDER BY deadline ASC NULLS LAST, created_at DESC LIMIT ?"
-            params = (status, limit)
+            conditions.append("status = ?")
+            params.append(status)
         else:
-            query = "SELECT * FROM tasks WHERE status != 'done' ORDER BY deadline ASC NULLS LAST, created_at DESC LIMIT ?"
-            params = (limit,)
-        async with self.db.execute(query, params) as cursor:
+            conditions.append("status != 'done'")
+
+        if tag:
+            # Match exact tag in comma-separated list: ,tag, within ,tags,
+            conditions.append("',' || tags || ',' LIKE ?")
+            params.append(f"%,{tag.strip().lower()},%")
+
+        where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
+        params.append(limit)
+        async with self.db.execute(
+            f"SELECT * FROM tasks{where} ORDER BY deadline ASC NULLS LAST, created_at DESC LIMIT ?",
+            tuple(params),
+        ) as cursor:
             return [dict(row) async for row in cursor]
 
     async def update_task_status(self, task_id: str, status: str) -> None:
@@ -60,6 +74,14 @@ class TaskStore:
         await self.db.execute(
             "UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?",
             (status, now, task_id),
+        )
+        await self.db.commit()
+
+    async def update_task_tags(self, task_id: str, tags: str) -> None:
+        now = datetime.now(timezone.utc).isoformat()
+        await self.db.execute(
+            "UPDATE tasks SET tags = ?, updated_at = ? WHERE id = ?",
+            (tags, now, task_id),
         )
         await self.db.commit()
 
@@ -91,13 +113,14 @@ class TaskStore:
         return joiner.join(f'"{w}"' for w in words)
 
     async def search_tasks(
-        self, query: str, status: str | None = None, limit: int = 20,
+        self, query: str, status: str | None = None, tag: str | None = None, limit: int = 20,
     ) -> list[dict]:
         """Search tasks using FTS5 full-text search on title and content.
 
         Args:
             query: Search words — tokenized and matched via FTS5.
             status: Filter by status. None = non-done, 'all' = everything.
+            tag: Filter by exact tag name.
             limit: Max results.
         """
         fts_query = self._build_fts_query(query)
@@ -113,6 +136,9 @@ class TaskStore:
             params.append(status)
         else:
             conditions.append("t.status != 'done'")
+        if tag:
+            conditions.append("',' || t.tags || ',' LIKE ?")
+            params.append(f"%,{tag.strip().lower()},%")
         where = " AND ".join(conditions)
         params.append(limit)
         async with self.db.execute(

@@ -425,9 +425,7 @@ function SessionItem({ session, isActive, isRunning, onSelect, onDelete, onRenam
     >
       {isImplementSession(session)
         ? <Hammer size={13} className="shrink-0 text-violet-400/60" />
-        : session.starred
-          ? <Star size={13} className="shrink-0 text-yellow-500 fill-yellow-500" />
-          : <MessageSquare size={13} className="shrink-0 opacity-50" />
+        : <MessageSquare size={13} className="shrink-0 opacity-50" />
       }
       <div className="flex-1 min-w-0">
         <div className="truncate text-[13px]">{cleanTitle(session)}</div>
@@ -443,13 +441,24 @@ function SessionItem({ session, isActive, isRunning, onSelect, onDelete, onRenam
         </span>
       )}
 
-      {/* Context menu trigger */}
+      {/* Menu trigger: starred → show star, on hover → three dots; unstarred → three dots on hover */}
       <div className="relative shrink-0" ref={menuRef}>
         <button
           onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
-          className="p-0.5 text-[#333] opacity-0 group-hover:opacity-100 hover:text-[#888] cursor-pointer transition-opacity"
+          className={`p-0.5 cursor-pointer transition-opacity ${
+            session.starred
+              ? 'text-yellow-500 opacity-100 [&>*:first-child]:block [&>*:last-child]:hidden hover:[&>*:first-child]:hidden hover:[&>*:last-child]:block hover:text-[#888]'
+              : 'text-[#333] opacity-0 group-hover:opacity-100 hover:text-[#888]'
+          }`}
         >
-          <MoreHorizontal size={14} />
+          {session.starred ? (
+            <>
+              <Star size={13} className="fill-yellow-500" />
+              <MoreHorizontal size={14} />
+            </>
+          ) : (
+            <MoreHorizontal size={14} />
+          )}
         </button>
 
         {menuOpen && (

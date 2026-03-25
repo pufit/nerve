@@ -327,6 +327,10 @@ class NotificationsConfig:
     channels: list[str] = field(default_factory=lambda: ["web", "telegram"])
     telegram_chat_id: int | None = None       # Target chat; falls back to first allowed_user
     default_expiry_hours: int = 48            # Auto-expire unanswered questions
+    priority_prefixes: dict[str, str] = field(default_factory=lambda: {
+        "high": "⚠️ ",
+        "urgent": "🚨 ",
+    })
 
     @classmethod
     def from_dict(cls, d: dict) -> NotificationsConfig:
@@ -334,6 +338,10 @@ class NotificationsConfig:
             channels=d.get("channels", ["web", "telegram"]),
             telegram_chat_id=d.get("telegram_chat_id"),
             default_expiry_hours=d.get("default_expiry_hours", 48),
+            priority_prefixes=d.get("priority_prefixes", {
+                "high": "⚠️ ",
+                "urgent": "🚨 ",
+            }),
         )
 
 

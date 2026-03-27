@@ -4,6 +4,8 @@
 
 Nerve is a single-process Python application that serves as a personal AI assistant. All components run within one process using async Python (asyncio).
 
+<!-- test dummy PR - delete me -->
+
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                      nerve (Python)                       │

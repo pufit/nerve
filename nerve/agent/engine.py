@@ -826,7 +826,8 @@ class AgentEngine:
             await client.connect()
             self.sessions.set_client(session_id, client)
 
-            # Record connected_at
+            # Record connected_at and the resolved model
+            resolved_model = options.model
             now = datetime.now(timezone.utc).isoformat()
             connected_at = session.get("connected_at") if session and sdk_resume_id else now
             await self.sessions.mark_active(
@@ -834,6 +835,7 @@ class AgentEngine:
                 sdk_session_id=sdk_resume_id,
                 connected_at=connected_at,
             )
+            await self.db.update_session_fields(session_id, {"model": resolved_model})
 
             logger.info(
                 "Created persistent client for session %s%s",

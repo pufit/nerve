@@ -42,6 +42,7 @@ export interface Session {
   connected_at?: string;
   message_count?: number;
   total_cost_usd?: number;
+  model?: string;
   // Real-time running status (set by backend + WS updates)
   is_running?: boolean;
   starred?: boolean;

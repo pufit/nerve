@@ -15,6 +15,17 @@ const STATUS_LABELS: Record<string, string> = {
   writing: 'Writing...',
 };
 
+/** Format a model identifier into a short display label. */
+function formatModelLabel(model: string): string {
+  const m = model.replace(/^claude-/, '');
+  const match = m.match(/^(\w+)-(\d+)-(\d+)/);
+  if (match) {
+    const name = match[1].charAt(0).toUpperCase() + match[1].slice(1);
+    return `${name} ${match[2]}.${match[3]}`;
+  }
+  return m.charAt(0).toUpperCase() + m.slice(1);
+}
+
 export function ChatPage() {
   const { sessionId } = useParams();
   const {
@@ -93,6 +104,14 @@ export function ChatPage() {
               <span className="font-medium text-[15px]">
                 {sessions.find(s => s.id === activeSession)?.title || activeSession}
               </span>
+              {(() => {
+                const model = sessions.find(s => s.id === activeSession)?.model;
+                return model ? (
+                  <span className="text-[11px] text-[#555] bg-[#1a1a1a] px-1.5 py-0.5 rounded">
+                    {formatModelLabel(model)}
+                  </span>
+                ) : null;
+              })()}
               {statusLabel && (
                 <div className="flex items-center gap-1.5 text-[12px] text-[#888]">
                   <Loader2 size={12} className="animate-spin text-[#6366f1]" />

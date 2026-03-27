@@ -646,12 +646,22 @@ class AgentEngine:
             # No allowed_tools — can_use_tool callback handles permissions.
             # External MCP server tools are discovered at connection time,
             # so we can't enumerate them upfront.
+            env=self._build_env(),
             cwd=str(self.config.workspace),
             mcp_servers=self._build_mcp_servers(session_id),
             # Claude Code plugins — loaded via --plugin-dir so the CLI
             # handles OAuth, credentials, and plugin lifecycle natively.
             plugins=self._claude_code_plugins,
         )
+
+
+    def _build_env(self) -> dict[str, str]:
+        """Build environment variables for the SDK subprocess."""
+        env: dict[str, str] = {}
+        api_key = self.config.effective_api_key
+        if api_key:
+            env["ANTHROPIC_API_KEY"] = api_key
+        return env
 
     def _build_mcp_servers(self, session_id: str) -> dict[str, Any]:
         """Build the mcp_servers dict: built-in nerve + external servers from config.

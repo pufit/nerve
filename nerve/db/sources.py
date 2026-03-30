@@ -109,7 +109,14 @@ class SourceStore:
         source: str,
         ttl_days: int = 7,
     ) -> int:
-        """Bulk insert source records into the inbox. Returns count inserted."""
+        """Bulk insert source records into the inbox. Returns count inserted.
+
+        If a record with the same (source, id) already exists but has different
+        metadata or content, the old record is deleted and re-inserted with a
+        new rowid. This ensures mutable sources (e.g. GitHub notifications whose
+        ``reason`` field changes from "author" to "mention") surface as new
+        messages for consumer cursors.
+        """
         import logging
         logger = logging.getLogger(__name__)
         now = datetime.now(timezone.utc)
@@ -119,13 +126,40 @@ class SourceStore:
         async with self._atomic():
             for r in records:
                 try:
+                    new_metadata = json.dumps(r.metadata) if r.metadata else None
+
+                    # Check if this record already exists
+                    async with self.db.execute(
+                        "SELECT metadata, content FROM source_messages "
+                        "WHERE source = ? AND id = ?",
+                        (source, r.id),
+                    ) as cursor:
+                        existing = await cursor.fetchone()
+
+                    if existing:
+                        old_metadata, old_content = existing[0], existing[1]
+                        if old_metadata == new_metadata and old_content == r.content:
+                            # Nothing changed — skip silently
+                            continue
+                        # Metadata or content changed — delete old record so the
+                        # re-insert gets a new (higher) rowid, making it visible
+                        # to consumer cursors that already read the old version.
+                        await self.db.execute(
+                            "DELETE FROM source_messages WHERE source = ? AND id = ?",
+                            (source, r.id),
+                        )
+                        logger.info(
+                            "Source message %s/%s updated (metadata changed) — re-inserting",
+                            source, r.id,
+                        )
+
                     await self.db.execute(
-                        "INSERT OR IGNORE INTO source_messages "
+                        "INSERT INTO source_messages "
                         "(id, source, record_type, summary, content, raw_content, timestamp, metadata, created_at, expires_at) "
                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         (r.id, source, r.record_type, r.summary, r.content,
                          getattr(r, 'raw_content', None),
-                         r.timestamp, json.dumps(r.metadata) if r.metadata else None,
+                         r.timestamp, new_metadata,
                          now_iso, expires),
                     )
                     inserted += 1

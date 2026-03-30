@@ -366,9 +366,10 @@ def restart(ctx: click.Context) -> None:
         return
 
     # Build the command that `start` would use to launch the daemon.
+    # Always use ``-m nerve`` so the restart works regardless of how *this*
+    # process was invoked (console-script, ``python -m nerve``, etc.).
     verbose = ctx.obj["verbose"]
-    nerve_bin = sys.argv[0]
-    start_cmd_parts = [sys.executable, nerve_bin, "-c", str(config_dir)]
+    start_cmd_parts = [sys.executable, "-m", "nerve", "-c", str(config_dir)]
     if verbose:
         start_cmd_parts.append("-v")
     start_cmd_parts.extend(["start", "--foreground"])

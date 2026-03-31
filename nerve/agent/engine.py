@@ -51,6 +51,19 @@ except ImportError:
     ThinkingBlock = None
 
 
+_SURROGATE_RE = re.compile(r"[\ud800-\udfff]")
+
+
+def _sanitize_surrogates(s: str) -> str:
+    """Remove orphaned UTF-16 surrogates that break JSON serialization.
+
+    The CLI may truncate large tool output mid-emoji, splitting a surrogate
+    pair and leaving an unpaired high/low surrogate.  These are invalid in
+    JSON and cause 400 errors from the Anthropic API.
+    """
+    return _SURROGATE_RE.sub("\ufffd", s) if _SURROGATE_RE.search(s) else s
+
+
 def _normalize_ts(ts: str) -> str:
     """Normalize timestamp to SQLite-compatible ``YYYY-MM-DD HH:MM:SS`` format.
 
@@ -957,6 +970,8 @@ class AgentEngine:
             if isinstance(block.content, str)
             else json.dumps(block.content, default=str)
         )
+        # Sanitize orphaned surrogates — CLI may truncate output mid-emoji
+        result_content = _sanitize_surrogates(result_content)
         tool_use_id = getattr(block, "tool_use_id", None)
         is_error = getattr(block, "is_error", False)
 

@@ -20,7 +20,7 @@ from typing import Any
 import click
 import yaml
 
-from nerve.workspace import initialize_workspace
+from nerve.workspace import initialize_workspace, install_bundled_skills
 
 
 # --- Cron definitions for the wizard ---
@@ -1278,7 +1278,12 @@ class SetupWizard:
         created = initialize_workspace(ws_path, self.choices.mode)
         click.secho(" ✓", fg="green")
 
-        # 2. Patch USER.md with name/timezone if provided (personal mode)
+        # 2. Install bundled skills
+        click.echo("  Installing bundled skills...", nl=False)
+        install_bundled_skills(ws_path)
+        click.secho(" ✓", fg="green")
+
+        # 3. Patch USER.md with name/timezone if provided (personal mode)
         if self.choices.mode == "personal" and self.choices.user_name:
             user_md = ws_path / "USER.md"
             if user_md.exists():
@@ -1287,7 +1292,7 @@ class SetupWizard:
                 content = content.replace("{{TIMEZONE}}", self.choices.timezone)
                 user_md.write_text(content, encoding="utf-8")
 
-        # 3. Patch TOOLS.md with Docker environment layout
+        # 4. Patch TOOLS.md with Docker environment layout
         if self._inside_docker:
             tools_md = ws_path / "TOOLS.md"
             if tools_md.exists():
@@ -1295,7 +1300,7 @@ class SetupWizard:
                 content += _DOCKER_TOOLS_SECTION
                 tools_md.write_text(content, encoding="utf-8")
 
-        # 4. Write TASK.md for worker mode
+        # 5. Write TASK.md for worker mode
         if self.choices.mode == "worker" and self.choices.task_description:
             task_md = ws_path / "TASK.md"
             task_md.write_text(
@@ -1303,29 +1308,29 @@ class SetupWizard:
                 encoding="utf-8",
             )
 
-        # 5. Write config.yaml
+        # 6. Write config.yaml
         click.echo("  Writing config.yaml...", nl=False)
         self._write_config_yaml()
         click.secho(" ✓", fg="green")
 
-        # 6. Write config.local.yaml
+        # 7. Write config.local.yaml
         click.echo("  Writing config.local.yaml...", nl=False)
         self._write_config_local_yaml()
         click.secho(" ✓", fg="green")
 
-        # 7. Create ~/.nerve directory structure
+        # 8. Create ~/.nerve directory structure
         click.echo("  Setting up ~/.nerve/...", nl=False)
         nerve_dir = Path("~/.nerve").expanduser()
         nerve_dir.mkdir(parents=True, exist_ok=True)
         (nerve_dir / "cron").mkdir(parents=True, exist_ok=True)
         click.secho(" ✓", fg="green")
 
-        # 8. Write cron jobs
+        # 9. Write cron jobs
         click.echo("  Configuring cron jobs...", nl=False)
         self._write_cron_jobs()
         click.secho(" ✓", fg="green")
 
-        # 9. Build web UI (server mode only — Docker handles this in entrypoint)
+        # 10. Build web UI (server mode only — Docker handles this in entrypoint)
         if not self._inside_docker:
             self._build_web_ui()
 

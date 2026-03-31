@@ -61,6 +61,70 @@ def get_expected_files(mode: str) -> list[str]:
     return [filename for filename, _ in read_manifest(mode)]
 
 
+def _get_bundled_skills_dir() -> Path | None:
+    """Resolve the bundled skills directory (nerve/templates/skills/).
+
+    Returns None if no bundled skills directory exists.
+    """
+    # Try importlib.resources first (works for installed packages)
+    try:
+        ref = importlib.resources.files("nerve") / "templates" / "skills"
+        skills_path = Path(str(ref))
+        if skills_path.is_dir():
+            return skills_path
+    except (TypeError, FileNotFoundError):
+        pass
+
+    # Fallback: resolve relative to this file (development mode)
+    skills_path = Path(__file__).parent / "templates" / "skills"
+    if skills_path.is_dir():
+        return skills_path
+
+    return None
+
+
+def install_bundled_skills(workspace_path: Path) -> list[str]:
+    """Copy bundled skills into the workspace skills directory.
+
+    Only copies skills that don't already exist — never overwrites.
+    Each subdirectory of templates/skills/ that contains a SKILL.md
+    is treated as a skill to install.
+
+    Args:
+        workspace_path: Target workspace directory.
+
+    Returns:
+        List of skill IDs that were installed.
+    """
+    bundled_dir = _get_bundled_skills_dir()
+    if bundled_dir is None:
+        logger.debug("No bundled skills directory found — skipping")
+        return []
+
+    skills_dir = workspace_path / "skills"
+    skills_dir.mkdir(parents=True, exist_ok=True)
+
+    installed = []
+    for skill_src in sorted(bundled_dir.iterdir()):
+        if not skill_src.is_dir():
+            continue
+        if not (skill_src / "SKILL.md").exists():
+            continue
+
+        skill_id = skill_src.name
+        skill_dst = skills_dir / skill_id
+
+        if skill_dst.exists():
+            logger.debug("Skipping skill %s — already exists", skill_id)
+            continue
+
+        shutil.copytree(skill_src, skill_dst)
+        logger.info("Installed bundled skill: %s", skill_id)
+        installed.append(skill_id)
+
+    return installed
+
+
 def initialize_workspace(workspace_path: Path, mode: str) -> list[str]:
     """Copy mode-appropriate template files into a workspace directory.
 

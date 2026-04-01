@@ -119,6 +119,17 @@ class SourceStore:
         async with self._atomic():
             for r in records:
                 try:
+                    # If this notification was updated (newer timestamp), delete the
+                    # stale row first.  The fresh INSERT then gets a new rowid, which
+                    # makes the message appear "unread" for every consumer whose
+                    # cursor already passed the old rowid.
+                    # If timestamps match, the DELETE is a no-op and the INSERT is
+                    # ignored — same as the old INSERT OR IGNORE behaviour.
+                    await self.db.execute(
+                        "DELETE FROM source_messages "
+                        "WHERE source = ? AND id = ? AND timestamp < ?",
+                        (source, r.id, r.timestamp),
+                    )
                     await self.db.execute(
                         "INSERT OR IGNORE INTO source_messages "
                         "(id, source, record_type, summary, content, raw_content, timestamp, metadata, created_at, expires_at) "

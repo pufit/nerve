@@ -51,20 +51,20 @@ export function MemoryBrowser() {
   return (
     <div className="flex h-full">
       {/* File list */}
-      <div className="w-60 border-r border-[#333] overflow-y-auto">
-        <div className="p-3 border-b border-[#333] text-sm font-medium text-[#888]">
+      <div className="w-60 border-r border-border-subtle overflow-y-auto">
+        <div className="p-3 border-b border-border-subtle text-sm font-medium text-text-muted">
           Memory Files
         </div>
         {files.map((f) => (
           <div
             key={f.path}
             onClick={() => openFile(f.path)}
-            className={`px-3 py-1.5 text-sm cursor-pointer hover:bg-[#252525] truncate ${
-              f.path === selected ? 'bg-[#252525] border-l-2 border-[#6366f1]' : ''
+            className={`px-3 py-1.5 text-sm cursor-pointer hover:bg-surface-raised truncate ${
+              f.path === selected ? 'bg-surface-raised border-l-2 border-[#6366f1]' : ''
             }`}
           >
             <div className="truncate">{f.name}</div>
-            <div className="text-xs text-[#555]">{formatSize(f.size)}</div>
+            <div className="text-xs text-text-faint">{formatSize(f.size)}</div>
           </div>
         ))}
       </div>
@@ -73,7 +73,7 @@ export function MemoryBrowser() {
       <div className="flex-1 flex flex-col">
         {selected ? (
           <>
-            <div className="flex items-center justify-between p-3 border-b border-[#333]">
+            <div className="flex items-center justify-between p-3 border-b border-border-subtle">
               <span className="text-sm font-medium">{selected}</span>
               <div className="flex gap-2">
                 {editing ? (
@@ -87,7 +87,7 @@ export function MemoryBrowser() {
                     </button>
                     <button
                       onClick={() => { setEditing(false); openFile(selected); }}
-                      className="text-xs px-2 py-1 bg-[#252525] border border-[#333] rounded text-[#888] cursor-pointer"
+                      className="text-xs px-2 py-1 bg-surface-raised border border-border-subtle rounded text-text-muted cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -95,7 +95,7 @@ export function MemoryBrowser() {
                 ) : (
                   <button
                     onClick={() => setEditing(true)}
-                    className="text-xs px-2 py-1 bg-[#252525] border border-[#333] rounded text-[#888] hover:text-[#e0e0e0] cursor-pointer"
+                    className="text-xs px-2 py-1 bg-surface-raised border border-border-subtle rounded text-text-muted hover:text-text cursor-pointer"
                   >
                     Edit
                   </button>
@@ -106,7 +106,7 @@ export function MemoryBrowser() {
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                className="flex-1 p-4 bg-[#0f0f0f] text-[#e0e0e0] font-mono text-sm outline-none resize-none"
+                className="flex-1 p-4 bg-bg text-text font-mono text-sm outline-none resize-none"
               />
             ) : (
               <pre className="flex-1 p-4 overflow-auto text-sm font-mono whitespace-pre-wrap">
@@ -115,7 +115,7 @@ export function MemoryBrowser() {
             )}
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-[#555]">
+          <div className="flex-1 flex items-center justify-center text-text-faint">
             Select a file
           </div>
         )}

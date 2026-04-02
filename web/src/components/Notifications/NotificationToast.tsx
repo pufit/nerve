@@ -32,7 +32,7 @@ export function NotificationToast() {
         return (
           <div
             key={notif.id}
-            className="bg-[#1a1a1a] border border-[#333] rounded-lg shadow-xl p-3 animate-slide-in"
+            className="bg-surface-raised border border-border-subtle rounded-lg shadow-xl p-3 animate-slide-in"
           >
             <div className="flex items-start gap-2">
               {isQuestion ? (
@@ -43,7 +43,7 @@ export function NotificationToast() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <p
-                    className="text-sm font-medium text-[#e0e0e0] cursor-pointer hover:text-[#6366f1]"
+                    className="text-sm font-medium text-text cursor-pointer hover:text-[#6366f1]"
                     onClick={() => {
                       navigate('/notifications');
                       dismissToast(notif.id);
@@ -53,13 +53,13 @@ export function NotificationToast() {
                   </p>
                   <button
                     onClick={() => dismissToast(notif.id)}
-                    className="text-[#555] hover:text-[#999] shrink-0 cursor-pointer"
+                    className="text-text-faint hover:text-text-muted shrink-0 cursor-pointer"
                   >
                     <X size={14} />
                   </button>
                 </div>
                 {notif.body && (
-                  <p className="text-xs text-[#888] mt-0.5 line-clamp-2">{notif.body}</p>
+                  <p className="text-xs text-text-muted mt-0.5 line-clamp-2">{notif.body}</p>
                 )}
                 {/* Quick answer buttons for questions */}
                 {isQuestion && options && notif.status === 'pending' && (

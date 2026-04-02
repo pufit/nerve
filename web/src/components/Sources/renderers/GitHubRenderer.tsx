@@ -18,17 +18,17 @@ export function GitHubRenderer({ content, metadata, summary: _summary }: Props) 
     <div>
       {/* GitHub header card */}
       {(repoName || subjectUrl) && (
-        <div className="mb-4 p-3 bg-[#141414] border border-[#222] rounded-lg">
+        <div className="mb-4 p-3 bg-surface border border-border-subtle rounded-lg">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <Github size={14} className="text-purple-400 shrink-0" />
-            <span className="text-[13px] text-[#ccc] font-medium">{repoName}</span>
+            <span className="text-[13px] text-text-secondary font-medium">{repoName}</span>
             {subjectType && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-950/30 text-purple-400">
                 {subjectType}
               </span>
             )}
             {reason && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#1a1a1a] text-[#888]">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-raised text-text-muted">
                 {reason}
               </span>
             )}

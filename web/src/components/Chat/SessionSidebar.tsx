@@ -293,7 +293,7 @@ export function SessionSidebar({ sessions, activeSession, agentStatus, onSelect,
                     onClick={() => onSelect(s.id)}
                     className={`group flex items-center gap-2 px-3 py-1.5 mx-1 rounded-md cursor-pointer text-[12px] transition-colors
                       ${s.id === activeSession
-                        ? 'bg-[#1f1f2f] text-text-muted'
+                        ? 'bg-[#6366f1]/10 text-text-muted'
                         : 'text-text-faint hover:bg-surface-raised hover:text-text-muted'
                       }`}
                   >
@@ -419,7 +419,7 @@ function SessionItem({ session, isActive, isRunning, onSelect, onDelete, onRenam
       onClick={() => onSelect(session.id)}
       className={`group flex items-center gap-2 px-3 py-1.5 mx-1 rounded-md cursor-pointer text-sm transition-colors
         ${isActive
-          ? 'bg-[#1f1f2f] text-text'
+          ? 'bg-[#6366f1]/10 text-text'
           : 'text-text-muted hover:bg-surface-raised hover:text-text-secondary'
         }`}
     >

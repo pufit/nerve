@@ -35,7 +35,7 @@ function sourceIcon(source: string) {
     case 'gmail': return <Mail size={14} className="text-red-400" />;
     case 'github': return <Github size={14} className="text-purple-400" />;
     case 'telegram': return <MessageCircle size={14} className="text-blue-400" />;
-    default: return <Inbox size={14} className="text-[#666]" />;
+    default: return <Inbox size={14} className="text-text-dim" />;
   }
 }
 
@@ -45,7 +45,7 @@ function sourceBadgeColor(source: string): string {
     case 'gmail': return 'text-red-400 bg-red-950/30';
     case 'github': return 'text-purple-400 bg-purple-950/30';
     case 'telegram': return 'text-blue-400 bg-blue-950/30';
-    default: return 'text-[#888] bg-[#1a1a1a]';
+    default: return 'text-text-muted bg-surface-raised';
   }
 }
 
@@ -72,7 +72,7 @@ function SyncButton({ onClick, small = false }: { onClick: () => Promise<void>; 
   return (
     <button onClick={handleClick} disabled={running}
       className={`flex items-center gap-1 rounded transition-colors cursor-pointer shrink-0
-        ${running ? 'text-[#444] cursor-not-allowed' : 'text-[#666] hover:text-[#ccc] hover:bg-[#1a1a1a]'}
+        ${running ? 'text-text-faint cursor-not-allowed' : 'text-text-dim hover:text-text-secondary hover:bg-surface-raised'}
         ${small ? 'p-1' : 'px-2 py-1.5 text-[12px]'}`}
       title="Sync now">
       {running ? <Loader2 size={small ? 12 : 14} className="animate-spin" /> : <Play size={small ? 12 : 14} />}
@@ -113,13 +113,13 @@ function SourceSidebar() {
   const totalStorage = overview?.total_storage_bytes || 0;
 
   return (
-    <div className="w-[220px] border-r border-[#222] flex flex-col shrink-0 overflow-y-auto">
+    <div className="w-[220px] border-r border-border-subtle flex flex-col shrink-0 overflow-y-auto">
       {/* Tab toggle */}
-      <div className="flex border-b border-[#222]">
+      <div className="flex border-b border-border-subtle">
         {(['inbox', 'runs', 'consumers'] as const).map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`flex-1 py-2 text-[12px] font-medium transition-colors cursor-pointer
-              ${activeTab === tab ? 'text-[#6366f1] border-b-2 border-[#6366f1]' : 'text-[#666] hover:text-[#999]'}`}>
+              ${activeTab === tab ? 'text-[#6366f1] border-b-2 border-[#6366f1]' : 'text-text-dim hover:text-text-muted'}`}>
             {tab === 'inbox' ? 'Inbox' : tab === 'runs' ? 'Runs' : 'Consumers'}
           </button>
         ))}
@@ -129,7 +129,7 @@ function SourceSidebar() {
       <div className="p-2 space-y-1">
         <button onClick={() => setActiveSource(null)}
           className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-[13px] transition-colors cursor-pointer
-            ${activeSource === null ? 'bg-[#6366f1]/15 text-[#6366f1]' : 'text-[#999] hover:text-[#ccc] hover:bg-[#1a1a1a]'}`}>
+            ${activeSource === null ? 'bg-[#6366f1]/15 text-[#6366f1]' : 'text-text-muted hover:text-text-secondary hover:bg-surface-raised'}`}>
           <span className="flex items-center gap-2"><Inbox size={14} /> All</span>
           <span className="text-[11px] opacity-70 tabular-nums shrink-0">{totalMessages}</span>
         </button>
@@ -140,7 +140,7 @@ function SourceSidebar() {
             <div key={src} className="group">
               <button onClick={() => setActiveSource(src)}
                 className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-[13px] transition-colors cursor-pointer
-                  ${activeSource === src ? 'bg-[#6366f1]/15 text-[#6366f1]' : 'text-[#999] hover:text-[#ccc] hover:bg-[#1a1a1a]'}`}>
+                  ${activeSource === src ? 'bg-[#6366f1]/15 text-[#6366f1]' : 'text-text-muted hover:text-text-secondary hover:bg-surface-raised'}`}>
                 <span className="flex items-center gap-1.5 min-w-0 truncate">
                   {sourceIcon(src)}
                   <span className="truncate">{sourceLabel(src)}</span>
@@ -168,15 +168,15 @@ function SourceSidebar() {
       </div>
 
       {/* Storage section */}
-      <div className="mt-auto border-t border-[#222] p-3 space-y-2">
+      <div className="mt-auto border-t border-border-subtle p-3 space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] text-[#666] flex items-center gap-1"><HardDrive size={11} /> Storage</span>
-          <span className="text-[12px] text-[#999]">{formatBytes(totalStorage)}</span>
+          <span className="text-[11px] text-text-dim flex items-center gap-1"><HardDrive size={11} /> Storage</span>
+          <span className="text-[12px] text-text-muted">{formatBytes(totalStorage)}</span>
         </div>
         {Object.entries(sources).filter(([, s]) => s.storage_bytes > 0).map(([src, s]) => (
           <div key={src} className="flex items-center justify-between text-[11px]">
-            <span className="text-[#666] truncate">{sourceLabel(src)}</span>
-            <span className="text-[#888]">{formatBytes(s.storage_bytes)}</span>
+            <span className="text-text-dim truncate">{sourceLabel(src)}</span>
+            <span className="text-text-muted">{formatBytes(s.storage_bytes)}</span>
           </div>
         ))}
 
@@ -188,7 +188,7 @@ function SourceSidebar() {
               else setPurgeConfirm(activeSource);
             }}
               className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 text-[11px] rounded transition-colors cursor-pointer
-                ${purgeConfirm === activeSource ? 'bg-red-900/30 text-red-400 border border-red-900/50' : 'text-[#666] hover:text-red-400 bg-[#141414] border border-[#222]'}`}>
+                ${purgeConfirm === activeSource ? 'bg-red-900/30 text-red-400 border border-red-900/50' : 'text-text-dim hover:text-red-400 bg-surface border border-border-subtle'}`}>
               <Trash2 size={10} /> {purgeConfirm === activeSource ? 'Confirm?' : 'Purge source'}
             </button>
           ) : (
@@ -197,7 +197,7 @@ function SourceSidebar() {
               else setPurgeConfirm('_all');
             }}
               className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 text-[11px] rounded transition-colors cursor-pointer
-                ${purgeConfirm === '_all' ? 'bg-red-900/30 text-red-400 border border-red-900/50' : 'text-[#666] hover:text-red-400 bg-[#141414] border border-[#222]'}`}>
+                ${purgeConfirm === '_all' ? 'bg-red-900/30 text-red-400 border border-red-900/50' : 'text-text-dim hover:text-red-400 bg-surface border border-border-subtle'}`}>
               <Trash2 size={10} /> {purgeConfirm === '_all' ? 'Confirm purge all?' : 'Purge all'}
             </button>
           )}
@@ -225,14 +225,14 @@ function SourceSidebar() {
 function SourceStats({ info }: { info: SourceOverviewEntry }) {
   return (
     <div className="space-y-1 pt-1">
-      <div className="text-[11px] text-[#666] flex items-center gap-1"><Database size={10} /> Stats</div>
+      <div className="text-[11px] text-text-dim flex items-center gap-1"><Database size={10} /> Stats</div>
       <div className="grid grid-cols-2 gap-x-3 text-[11px]">
-        <span className="text-[#666]">1h runs</span><span className="text-[#999]">{info.stats_1h.runs}</span>
-        <span className="text-[#666]">1h fetched</span><span className="text-[#999]">{info.stats_1h.fetched}</span>
-        <span className="text-[#666]">24h runs</span><span className="text-[#999]">{info.stats_24h.runs}</span>
-        <span className="text-[#666]">24h fetched</span><span className="text-[#999]">{info.stats_24h.fetched}</span>
+        <span className="text-text-dim">1h runs</span><span className="text-text-muted">{info.stats_1h.runs}</span>
+        <span className="text-text-dim">1h fetched</span><span className="text-text-muted">{info.stats_1h.fetched}</span>
+        <span className="text-text-dim">24h runs</span><span className="text-text-muted">{info.stats_24h.runs}</span>
+        <span className="text-text-dim">24h fetched</span><span className="text-text-muted">{info.stats_24h.fetched}</span>
         {info.stats_24h.errors > 0 && <>
-          <span className="text-[#666]">24h errors</span><span className="text-red-400">{info.stats_24h.errors}</span>
+          <span className="text-text-dim">24h errors</span><span className="text-red-400">{info.stats_24h.errors}</span>
         </>}
       </div>
     </div>
@@ -252,14 +252,14 @@ function AggregateStats({ sources }: { sources: Record<string, SourceOverviewEnt
   );
   return (
     <div className="space-y-1 pt-1">
-      <div className="text-[11px] text-[#666] flex items-center gap-1"><Database size={10} /> Stats (all)</div>
+      <div className="text-[11px] text-text-dim flex items-center gap-1"><Database size={10} /> Stats (all)</div>
       <div className="grid grid-cols-2 gap-x-3 text-[11px]">
-        <span className="text-[#666]">1h runs</span><span className="text-[#999]">{totals.runs_1h}</span>
-        <span className="text-[#666]">1h fetched</span><span className="text-[#999]">{totals.fetched_1h}</span>
-        <span className="text-[#666]">24h runs</span><span className="text-[#999]">{totals.runs_24h}</span>
-        <span className="text-[#666]">24h fetched</span><span className="text-[#999]">{totals.fetched_24h}</span>
+        <span className="text-text-dim">1h runs</span><span className="text-text-muted">{totals.runs_1h}</span>
+        <span className="text-text-dim">1h fetched</span><span className="text-text-muted">{totals.fetched_1h}</span>
+        <span className="text-text-dim">24h runs</span><span className="text-text-muted">{totals.runs_24h}</span>
+        <span className="text-text-dim">24h fetched</span><span className="text-text-muted">{totals.fetched_24h}</span>
         {totals.errors_24h > 0 && <>
-          <span className="text-[#666]">24h errors</span><span className="text-red-400">{totals.errors_24h}</span>
+          <span className="text-text-dim">24h errors</span><span className="text-red-400">{totals.errors_24h}</span>
         </>}
       </div>
     </div>
@@ -281,11 +281,11 @@ function MessageList() {
   }, [hasMore, loading, loadMore]);
 
   if (loading && messages.length === 0) {
-    return <div className="flex-1 flex items-center justify-center text-[#444]"><Loader2 size={20} className="animate-spin" /></div>;
+    return <div className="flex-1 flex items-center justify-center text-text-faint"><Loader2 size={20} className="animate-spin" /></div>;
   }
 
   if (messages.length === 0) {
-    return <div className="flex-1 flex items-center justify-center text-[#444] text-sm">No messages</div>;
+    return <div className="flex-1 flex items-center justify-center text-text-faint text-sm">No messages</div>;
   }
 
   return (
@@ -294,20 +294,20 @@ function MessageList() {
         const isSelected = selectedMessage?.id === msg.id && selectedMessage?.source === msg.source;
         return (
           <button key={`${msg.source}:${msg.id}`} onClick={() => selectMessage(msg.source, msg.id)}
-            className={`w-full text-left px-3 py-2.5 border-b border-[#1a1a1a] transition-colors cursor-pointer
-              ${isSelected ? 'bg-[#6366f1]/10 border-l-2 border-l-[#6366f1]' : 'hover:bg-[#141414]'}`}>
+            className={`w-full text-left px-3 py-2.5 border-b border-border-subtle transition-colors cursor-pointer
+              ${isSelected ? 'bg-[#6366f1]/10 border-l-2 border-l-[#6366f1]' : 'hover:bg-surface'}`}>
             <div className="flex items-center gap-2 mb-0.5">
               <span className={`text-[10px] px-1.5 py-0.5 rounded ${sourceBadgeColor(msg.source)}`}>
                 {msg.source.split(':')[0]}
               </span>
-              <span className="text-[11px] text-[#555] ml-auto">{formatRelativeTime(msg.timestamp)}</span>
+              <span className="text-[11px] text-text-faint ml-auto">{formatRelativeTime(msg.timestamp)}</span>
             </div>
-            <div className="text-[13px] text-[#ccc] truncate">{msg.summary}</div>
+            <div className="text-[13px] text-text-secondary truncate">{msg.summary}</div>
           </button>
         );
       })}
       {loading && (
-        <div className="flex items-center justify-center py-3 text-[#444]">
+        <div className="flex items-center justify-center py-3 text-text-faint">
           <Loader2 size={16} className="animate-spin" />
         </div>
       )}
@@ -326,11 +326,11 @@ function RunsList() {
     : runs;
 
   if (loading && runs.length === 0) {
-    return <div className="flex-1 flex items-center justify-center text-[#444]"><Loader2 size={20} className="animate-spin" /></div>;
+    return <div className="flex-1 flex items-center justify-center text-text-faint"><Loader2 size={20} className="animate-spin" /></div>;
   }
 
   if (runs.length === 0) {
-    return <div className="flex-1 flex items-center justify-center text-[#444] text-sm">No runs recorded</div>;
+    return <div className="flex-1 flex items-center justify-center text-text-faint text-sm">No runs recorded</div>;
   }
 
   const healthEntry = activeSource ? sourceHealth?.[activeSource] : null;
@@ -351,14 +351,14 @@ function RunsList() {
             <AlertTriangle size={12} />
             Circuit breaker: {healthEntry.state}
           </div>
-          <div className="text-[#888]">
+          <div className="text-text-muted">
             {healthEntry.consecutive_failures} consecutive failure{healthEntry.consecutive_failures !== 1 ? 's' : ''}
             {healthEntry.backoff_until && (
               <> · Backoff until {new Date(healthEntry.backoff_until).toLocaleTimeString()}</>
             )}
           </div>
           {healthEntry.last_error && (
-            <div className="mt-1 text-[11px] text-[#666] truncate">
+            <div className="mt-1 text-[11px] text-text-dim truncate">
               Last error: {healthEntry.last_error}
             </div>
           )}
@@ -366,11 +366,11 @@ function RunsList() {
       )}
 
       {/* Filter bar */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#1a1a1a] shrink-0">
-        <span className="text-[11px] text-[#666]">
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-border-subtle shrink-0">
+        <span className="text-[11px] text-text-dim">
           {filteredRuns.length}{hideEmpty && filteredRuns.length !== runs.length ? ` of ${runs.length}` : ''} runs
         </span>
-        <label className="flex items-center gap-1.5 text-[11px] text-[#666] cursor-pointer select-none">
+        <label className="flex items-center gap-1.5 text-[11px] text-text-dim cursor-pointer select-none">
           <Filter size={10} />
           <input
             type="checkbox"
@@ -384,8 +384,8 @@ function RunsList() {
 
       <div className="flex-1 overflow-y-auto">
         <table className="w-full text-[13px]">
-          <thead className="sticky top-0 bg-[#0f0f0f]">
-            <tr className="text-[#888]">
+          <thead className="sticky top-0 bg-bg">
+            <tr className="text-text-muted">
               <th className="text-left px-3 py-2 font-medium">Source</th>
               <th className="text-left px-3 py-2 font-medium">Time</th>
               <th className="text-left px-3 py-2 font-medium">F/P</th>
@@ -397,16 +397,16 @@ function RunsList() {
               const isSelected = selectedRun?.id === run.id;
               return (
                 <tr key={run.id} onClick={() => selectRun(run)}
-                  className={`border-t border-[#1a1a1a] cursor-pointer transition-colors
-                    ${isSelected ? 'bg-[#6366f1]/10' : 'hover:bg-[#141414]'}`}>
+                  className={`border-t border-border-subtle cursor-pointer transition-colors
+                    ${isSelected ? 'bg-[#6366f1]/10' : 'hover:bg-surface'}`}>
                   <td className="px-3 py-2">
                     <span className="flex items-center gap-1.5">
                       {sourceIcon(run.source)}
-                      <span className="text-[#ccc] truncate max-w-[120px]">{sourceLabel(run.source)}</span>
+                      <span className="text-text-secondary truncate max-w-[120px]">{sourceLabel(run.source)}</span>
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-[#666]">{formatRelativeTime(run.ran_at)}</td>
-                  <td className="px-3 py-2 text-[#999]">{run.records_fetched}/{run.records_processed}</td>
+                  <td className="px-3 py-2 text-text-dim">{formatRelativeTime(run.ran_at)}</td>
+                  <td className="px-3 py-2 text-text-muted">{run.records_fetched}/{run.records_processed}</td>
                   <td className="px-3 py-2">
                     {run.error ? (
                       <span className="flex items-center gap-1 text-red-400"><XCircle size={12} /> error</span>
@@ -431,12 +431,12 @@ function RunDetail() {
   const navigate = useNavigate();
 
   if (detailLoading) {
-    return <div className="flex-1 flex items-center justify-center text-[#444]"><Loader2 size={20} className="animate-spin" /></div>;
+    return <div className="flex-1 flex items-center justify-center text-text-faint"><Loader2 size={20} className="animate-spin" /></div>;
   }
 
   if (!selectedRun) {
     return (
-      <div className="flex-1 flex items-center justify-center text-[#444]">
+      <div className="flex-1 flex items-center justify-center text-text-faint">
         <div className="text-center">
           <Play size={32} className="mx-auto mb-2 opacity-30" />
           <div className="text-sm">Select a run to view details</div>
@@ -450,27 +450,27 @@ function RunDetail() {
   return (
     <div className="flex-1 overflow-y-auto">
       {/* Run header */}
-      <div className="px-4 py-3 border-b border-[#222] bg-[#0f0f0f]">
+      <div className="px-4 py-3 border-b border-border-subtle bg-bg">
         <div className="flex items-center gap-2 mb-1">
           {sourceIcon(run.source)}
-          <span className="text-[14px] text-[#ccc] font-medium">{sourceLabel(run.source)}</span>
+          <span className="text-[14px] text-text-secondary font-medium">{sourceLabel(run.source)}</span>
           {run.error ? (
             <span className="flex items-center gap-1 text-[11px] text-red-400"><XCircle size={11} /> error</span>
           ) : (
             <span className="flex items-center gap-1 text-[11px] text-emerald-400"><CheckCircle2 size={11} /> ok</span>
           )}
         </div>
-        <div className="text-[12px] text-[#666]">{new Date(run.ran_at).toLocaleString()}</div>
+        <div className="text-[12px] text-text-dim">{new Date(run.ran_at).toLocaleString()}</div>
 
         {/* Stats */}
         <div className="flex gap-4 mt-2">
           <span className="text-[12px]">
-            <span className="text-[#666]">Fetched:</span>{' '}
-            <span className="text-[#999]">{run.records_fetched}</span>
+            <span className="text-text-dim">Fetched:</span>{' '}
+            <span className="text-text-muted">{run.records_fetched}</span>
           </span>
           <span className="text-[12px]">
-            <span className="text-[#666]">Processed:</span>{' '}
-            <span className="text-[#999]">{run.records_processed}</span>
+            <span className="text-text-dim">Processed:</span>{' '}
+            <span className="text-text-muted">{run.records_processed}</span>
           </span>
         </div>
 
@@ -492,20 +492,20 @@ function RunDetail() {
 
       {/* Consumed messages */}
       <div className="px-4 py-3">
-        <div className="text-[12px] text-[#666] mb-2">
+        <div className="text-[12px] text-text-dim mb-2">
           {selectedRunMessages.length > 0
             ? `${selectedRunMessages.length} message${selectedRunMessages.length > 1 ? 's' : ''} consumed`
             : run.session_id ? 'No linked messages' : 'No session linked to this run'}
         </div>
         {selectedRunMessages.map((msg) => (
           <div key={`${msg.source}:${msg.id}`}
-            className="flex items-start gap-2 px-2 py-2 rounded hover:bg-[#141414] transition-colors border-b border-[#1a1a1a] last:border-0">
+            className="flex items-start gap-2 px-2 py-2 rounded hover:bg-surface transition-colors border-b border-border-subtle last:border-0">
             <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 mt-0.5 ${sourceBadgeColor(msg.source)}`}>
               {msg.record_type.replace('_', ' ')}
             </span>
             <div className="min-w-0 flex-1">
-              <div className="text-[13px] text-[#ccc] truncate">{msg.summary}</div>
-              <div className="text-[11px] text-[#555]">{formatRelativeTime(msg.timestamp)}</div>
+              <div className="text-[13px] text-text-secondary truncate">{msg.summary}</div>
+              <div className="text-[11px] text-text-faint">{formatRelativeTime(msg.timestamp)}</div>
             </div>
           </div>
         ))}
@@ -522,12 +522,12 @@ function MessageDetail() {
   const [showProcessed, setShowProcessed] = useState(false);
 
   if (detailLoading) {
-    return <div className="flex-1 flex items-center justify-center text-[#444]"><Loader2 size={20} className="animate-spin" /></div>;
+    return <div className="flex-1 flex items-center justify-center text-text-faint"><Loader2 size={20} className="animate-spin" /></div>;
   }
 
   if (!selectedMessage) {
     return (
-      <div className="flex-1 flex items-center justify-center text-[#444]">
+      <div className="flex-1 flex items-center justify-center text-text-faint">
         <div className="text-center">
           <Inbox size={32} className="mx-auto mb-2 opacity-30" />
           <div className="text-sm">Select a message to view</div>
@@ -542,22 +542,22 @@ function MessageDetail() {
   return (
     <div className="flex-1 overflow-y-auto">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-[#222] bg-[#0f0f0f]">
+      <div className="px-4 py-3 border-b border-border-subtle bg-bg">
         <div className="flex items-center gap-2 mb-1">
           <span className={`text-[10px] px-1.5 py-0.5 rounded ${sourceBadgeColor(msg.source)}`}>
             {msg.record_type}
           </span>
-          <span className="text-[11px] text-[#555]">{new Date(msg.timestamp).toLocaleString()}</span>
+          <span className="text-[11px] text-text-faint">{new Date(msg.timestamp).toLocaleString()}</span>
         </div>
-        <div className="text-[14px] text-[#ccc] font-medium">{msg.summary}</div>
+        <div className="text-[14px] text-text-secondary font-medium">{msg.summary}</div>
 
         {/* Metadata */}
         {msg.metadata && Object.keys(msg.metadata).length > 0 && (
           <div className="flex flex-wrap gap-2 mt-2">
             {Object.entries(msg.metadata).map(([k, v]) => (
-              <span key={k} className="text-[11px] px-1.5 py-0.5 bg-[#141414] border border-[#222] rounded">
-                <span className="text-[#666]">{k}:</span>{' '}
-                <span className="text-[#999]">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
+              <span key={k} className="text-[11px] px-1.5 py-0.5 bg-surface border border-border-subtle rounded">
+                <span className="text-text-dim">{k}:</span>{' '}
+                <span className="text-text-muted">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
               </span>
             ))}
           </div>
@@ -587,13 +587,13 @@ function MessageDetail() {
       {hasProcessedContent && (
         <div className="px-4 pb-4">
           <button onClick={() => setShowProcessed(!showProcessed)}
-            className="flex items-center gap-1.5 text-[12px] text-[#666] hover:text-[#999] transition-colors cursor-pointer mb-2">
+            className="flex items-center gap-1.5 text-[12px] text-text-dim hover:text-text-muted transition-colors cursor-pointer mb-2">
             {showProcessed ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             Processed version (what the agent saw)
           </button>
           {showProcessed && (
-            <div className="p-3 bg-[#141414] border border-[#222] rounded-lg">
-              <div className="prose prose-invert prose-sm max-w-none text-[#999]">
+            <div className="p-3 bg-surface border border-border-subtle rounded-lg">
+              <div className="prose prose-invert prose-sm max-w-none text-text-muted">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {msg.processed_content || ''}
                 </ReactMarkdown>
@@ -612,11 +612,11 @@ function ConsumersList() {
   const { consumers, loading } = useSourcesStore();
 
   if (loading && consumers.length === 0) {
-    return <div className="flex-1 flex items-center justify-center text-[#444]"><Loader2 size={20} className="animate-spin" /></div>;
+    return <div className="flex-1 flex items-center justify-center text-text-faint"><Loader2 size={20} className="animate-spin" /></div>;
   }
 
   if (consumers.length === 0) {
-    return <div className="flex-1 flex items-center justify-center text-[#444] text-sm">No active consumers</div>;
+    return <div className="flex-1 flex items-center justify-center text-text-faint text-sm">No active consumers</div>;
   }
 
   // Group by consumer name
@@ -628,16 +628,16 @@ function ConsumersList() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex items-center px-3 py-1.5 border-b border-[#1a1a1a] shrink-0">
-        <span className="text-[11px] text-[#666]">
+      <div className="flex items-center px-3 py-1.5 border-b border-border-subtle shrink-0">
+        <span className="text-[11px] text-text-dim">
           {consumers.length} cursor{consumers.length !== 1 ? 's' : ''} across {Object.keys(grouped).length} consumer{Object.keys(grouped).length !== 1 ? 's' : ''}
         </span>
       </div>
 
       <div className="flex-1 overflow-y-auto">
         <table className="w-full text-[13px]">
-          <thead className="sticky top-0 bg-[#0f0f0f]">
-            <tr className="text-[#888]">
+          <thead className="sticky top-0 bg-bg">
+            <tr className="text-text-muted">
               <th className="text-left px-3 py-2 font-medium">Consumer</th>
               <th className="text-left px-3 py-2 font-medium">Source</th>
               <th className="text-right px-3 py-2 font-medium">Position</th>
@@ -649,26 +649,26 @@ function ConsumersList() {
           <tbody>
             {consumers.map((c) => (
               <tr key={`${c.consumer}-${c.source}`}
-                className="border-t border-[#1a1a1a] hover:bg-[#141414] transition-colors">
-                <td className="px-3 py-2 text-[#ccc] font-mono text-[12px]">{c.consumer}</td>
+                className="border-t border-border-subtle hover:bg-surface transition-colors">
+                <td className="px-3 py-2 text-text-secondary font-mono text-[12px]">{c.consumer}</td>
                 <td className="px-3 py-2">
                   <span className="flex items-center gap-1.5">
                     {sourceIcon(c.source)}
-                    <span className="text-[#ccc] truncate max-w-[140px]">{sourceLabel(c.source)}</span>
+                    <span className="text-text-secondary truncate max-w-[140px]">{sourceLabel(c.source)}</span>
                   </span>
                 </td>
-                <td className="px-3 py-2 text-right text-[#888] font-mono tabular-nums text-[12px]">
+                <td className="px-3 py-2 text-right text-text-muted font-mono tabular-nums text-[12px]">
                   {c.cursor_seq}
                 </td>
                 <td className="px-3 py-2 text-right">
                   {c.unread > 0 ? (
                     <span className="text-amber-400 font-medium tabular-nums">{c.unread}</span>
                   ) : (
-                    <span className="text-[#444] tabular-nums">0</span>
+                    <span className="text-text-faint tabular-nums">0</span>
                   )}
                 </td>
-                <td className="px-3 py-2 text-[#666]">{formatRelativeTime(c.updated_at)}</td>
-                <td className="px-3 py-2 text-[#666]">
+                <td className="px-3 py-2 text-text-dim">{formatRelativeTime(c.updated_at)}</td>
+                <td className="px-3 py-2 text-text-dim">
                   {c.expires_at ? formatRelativeTime(c.expires_at).replace(' ago', '') : '—'}
                 </td>
               </tr>
@@ -691,24 +691,24 @@ function ConsumersDetail() {
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto">
-      <div className="px-4 py-3 border-b border-[#222] bg-[#0f0f0f]">
-        <h3 className="text-sm font-medium text-[#ccc]">Consumer Sessions</h3>
-        <p className="text-[11px] text-[#666] mt-0.5">Cron sessions processing the inbox</p>
+      <div className="px-4 py-3 border-b border-border-subtle bg-bg">
+        <h3 className="text-sm font-medium text-text-secondary">Consumer Sessions</h3>
+        <p className="text-[11px] text-text-dim mt-0.5">Cron sessions processing the inbox</p>
       </div>
       <div className="p-4 space-y-2">
         {sessions.length === 0 ? (
-          <div className="text-[13px] text-[#444]">No active consumer sessions</div>
+          <div className="text-[13px] text-text-faint">No active consumer sessions</div>
         ) : sessions.map(sid => {
           const cursorsForSession = consumers.filter(c => c.session_id === sid);
           const totalUnread = cursorsForSession.reduce((sum, c) => sum + c.unread, 0);
           return (
             <button key={sid} onClick={() => navigate(`/chat/${sid}`)}
-              className="w-full text-left p-3 rounded border border-[#222] hover:border-[#333] hover:bg-[#141414] transition-colors cursor-pointer">
+              className="w-full text-left p-3 rounded border border-border-subtle hover:border-border-subtle hover:bg-surface transition-colors cursor-pointer">
               <div className="flex items-center justify-between">
-                <span className="text-[13px] text-[#ccc] font-mono">{sid}</span>
-                <ExternalLink size={12} className="text-[#444]" />
+                <span className="text-[13px] text-text-secondary font-mono">{sid}</span>
+                <ExternalLink size={12} className="text-text-faint" />
               </div>
-              <div className="flex items-center gap-3 mt-1.5 text-[11px] text-[#666]">
+              <div className="flex items-center gap-3 mt-1.5 text-[11px] text-text-dim">
                 <span>{cursorsForSession.length} source{cursorsForSession.length !== 1 ? 's' : ''}</span>
                 {totalUnread > 0 && <span className="text-amber-400">{totalUnread} unread</span>}
               </div>
@@ -747,17 +747,17 @@ export function SourcesPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="border-b border-[#222] px-4 py-2.5 flex items-center justify-between bg-[#0f0f0f] shrink-0">
+      <div className="border-b border-border-subtle px-4 py-2.5 flex items-center justify-between bg-bg shrink-0">
         <h1 className="text-lg font-semibold">Sources</h1>
         <div className="flex items-center gap-2">
           <button onClick={handleSyncAll} disabled={syncing}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-[12px] rounded-lg transition-colors cursor-pointer
-              ${syncing ? 'text-[#444] cursor-not-allowed bg-[#141414]' : 'text-[#888] hover:text-[#ccc] bg-[#141414] hover:bg-[#1a1a1a] border border-[#222]'}`}>
+              ${syncing ? 'text-text-faint cursor-not-allowed bg-surface' : 'text-text-muted hover:text-text-secondary bg-surface hover:bg-surface-raised border border-border-subtle'}`}>
             {syncing ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
             {syncing ? 'Syncing...' : 'Sync All'}
           </button>
           <button onClick={() => { loadOverview(); if (activeTab === 'inbox') loadMessages(); }}
-            className="text-[#666] hover:text-[#aaa] cursor-pointer p-1.5 hover:bg-[#1a1a1a] rounded"
+            className="text-text-dim hover:text-[#aaa] cursor-pointer p-1.5 hover:bg-surface-raised rounded"
             title="Refresh">
             <RefreshCw size={16} />
           </button>
@@ -771,7 +771,7 @@ export function SourcesPage() {
         {/* Main + Detail split */}
         <div className="flex-1 flex min-w-0">
           {/* Main panel: message list, runs, or consumers */}
-          <div className="flex-1 flex flex-col min-w-0 border-r border-[#222]">
+          <div className="flex-1 flex flex-col min-w-0 border-r border-border-subtle">
             {activeTab === 'inbox' ? <MessageList /> : activeTab === 'runs' ? <RunsList /> : <ConsumersList />}
           </div>
 

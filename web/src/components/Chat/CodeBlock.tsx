@@ -15,11 +15,11 @@ export function CodeBlock({ className, children }: { className?: string; childre
 
   return (
     <div className="relative group my-2">
-      <div className="flex items-center justify-between bg-[#1a1a1a] border border-[#2a2a2a] rounded-t-md px-3 py-1">
-        <span className="text-[11px] text-[#666] font-mono">{language}</span>
+      <div className="flex items-center justify-between bg-surface-raised border border-border rounded-t-md px-3 py-1">
+        <span className="text-[11px] text-text-dim font-mono">{language}</span>
         <button
           onClick={handleCopy}
-          className="text-[#666] hover:text-[#aaa] cursor-pointer p-1"
+          className="text-text-dim hover:text-[#aaa] cursor-pointer p-1"
           title="Copy"
         >
           {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}

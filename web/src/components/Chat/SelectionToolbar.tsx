@@ -103,13 +103,13 @@ export function SelectionToolbar({ containerRef }: { containerRef: React.RefObje
         transform: 'translate(-50%, -100%)',
       }}
     >
-      <div className="flex items-center bg-[#1e1e1e] border border-[#3a3a3a] rounded-lg shadow-xl shadow-black/50 overflow-hidden">
+      <div className="flex items-center bg-surface-raised border border-border rounded-lg shadow-xl shadow-black/50 overflow-hidden">
         {ACTIONS.map(({ action, icon: Icon, label }) => (
           <button
             key={action}
             onClick={() => handleAction(action)}
             title={label}
-            className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#aaa] hover:text-white hover:bg-[#2a2a2a] transition-colors cursor-pointer border-r border-[#2a2a2a] last:border-r-0"
+            className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#aaa] hover:text-white hover:bg-[#2a2a2a] transition-colors cursor-pointer border-r border-border last:border-r-0"
           >
             <Icon size={13} />
             <span>{label}</span>

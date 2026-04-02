@@ -37,7 +37,7 @@ export function MessageList({ messages, streamingBlocks, isStreaming }: {
       <SelectionToolbar containerRef={containerRef} />
 
       {messages.length === 0 && !isStreaming && (
-        <div className="flex items-center justify-center h-full text-[#444] text-lg">
+        <div className="flex items-center justify-center h-full text-text-faint text-lg">
           Start a conversation
         </div>
       )}

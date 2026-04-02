@@ -311,7 +311,7 @@ class TestConfigMemoryModels:
         assert config.recall_model == "claude-sonnet-4-6"
         assert config.memorize_model == "claude-sonnet-4-6"
         assert config.fast_model == "claude-haiku-4-5-20251001"
-        assert config.embed_model == "text-embedding-3-small"
+        assert config.embed_model == ""
 
     def test_from_dict(self):
         config = MemoryConfig.from_dict({

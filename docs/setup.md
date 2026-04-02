@@ -131,7 +131,7 @@ The wizard handles all of this automatically, but you can also configure manuall
 # Create secrets file (gitignored)
 cat > config.local.yaml << 'EOF'
 anthropic_api_key: sk-ant-...
-openai_api_key: sk-...           # For memU embeddings (optional)
+openai_api_key: sk-...           # Optional — enables vector-based memory search
 
 telegram:
   bot_token: "123456:ABC..."

@@ -673,9 +673,10 @@ class SetupWizard:
         """Prompt for optional OpenAI API key (used by both auth paths)."""
         click.echo()
         click.secho(
-            "Optionally, an OpenAI key enables better memory search\n"
-            "(text-embedding-3-small for vector embeddings). Nerve works\n"
-            "without it but recall quality improves significantly.",
+            "Optionally, an OpenAI key enables vector-based memory search\n"
+            "(text-embedding-3-small for semantic embeddings). Nerve works\n"
+            "without it using LLM-based recall, which uses more API tokens\n"
+            "per query but requires no additional API key.",
             dim=True,
         )
         click.echo()

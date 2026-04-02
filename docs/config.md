@@ -99,7 +99,7 @@ Sources pull data from external services on a schedule. See [sources.md](sources
 | `memory.recall_model` | string | `claude-sonnet-4-6` | Model for recall routing |
 | `memory.memorize_model` | string | `claude-sonnet-4-6` | Model for extraction & preprocessing |
 | `memory.fast_model` | string | `claude-haiku-4-5-20251001` | Model for categorization, date resolution, knowledge filtering |
-| `memory.embed_model` | string | `text-embedding-3-small` | Embedding model |
+| `memory.embed_model` | string | *(empty)* | Embedding model (only used when `openai_api_key` is set, e.g. `text-embedding-3-small`) |
 | `memory.semantic_dedup_threshold` | float | `0.85` | Cosine similarity threshold for semantic deduplication (0 to disable) |
 | `memory.knowledge_filter` | bool | `false` | Post-extraction LLM filter that deletes generic knowledge items (extra Haiku API call per memorize) |
 | `memory.categories` | list | `[]` | Seed categories — each entry has `name` and `description` fields. Used for semantic routing when memorizing and recalling facts. `nerve init` populates mode-appropriate defaults (personal: relationships, finances, health, etc.; worker: patterns, procedures, approvals, etc.). |
@@ -174,7 +174,7 @@ Nerve automatically discovers MCP servers from Claude Code's enabled plugins. An
 | Key | Type | Description |
 |-----|------|-------------|
 | `anthropic_api_key` | string | Anthropic API key (agent + memU chat). Not required when proxy is enabled. |
-| `openai_api_key` | string | OpenAI API key (memU embeddings only) |
+| `openai_api_key` | string | OpenAI API key (optional — enables vector-based memory search via embeddings; without it, LLM-based recall is used) |
 | `brave_search_api_key` | string | Brave Search API key (optional) |
 
 ## Proxy (CLIProxyAPI)

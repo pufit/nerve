@@ -46,7 +46,7 @@ sync:
 # Memory (memU)
 memory:
   chat_model: claude-sonnet-4-6
-  embed_model: text-embedding-3-small
+  # embed_model: text-embedding-3-small  # Only needed with openai_api_key
 
 # Cron
 cron:

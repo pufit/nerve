@@ -253,7 +253,7 @@ class MemoryConfig:
     recall_model: str = "claude-sonnet-4-6"  # Recall routing
     memorize_model: str = "claude-sonnet-4-6"  # Extraction & preprocessing
     fast_model: str = "claude-haiku-4-5-20251001"  # Category summaries, date resolution
-    embed_model: str = "text-embedding-3-small"
+    embed_model: str = ""
     sqlite_dsn: str = ""
     semantic_dedup_threshold: float = 0.85  # Cosine similarity threshold for semantic dedup
     knowledge_filter: bool = False  # Post-extraction LLM filter for generic knowledge (extra API call)
@@ -268,7 +268,7 @@ class MemoryConfig:
             recall_model=d.get("recall_model", "claude-sonnet-4-6"),
             memorize_model=d.get("memorize_model", "claude-sonnet-4-6"),
             fast_model=d.get("fast_model", "claude-haiku-4-5-20251001"),
-            embed_model=d.get("embed_model", "text-embedding-3-small"),
+            embed_model=d.get("embed_model", ""),
             sqlite_dsn=d.get("sqlite_dsn", default_dsn),
             semantic_dedup_threshold=float(d.get("semantic_dedup_threshold", 0.85)),
             knowledge_filter=bool(d.get("knowledge_filter", False)),

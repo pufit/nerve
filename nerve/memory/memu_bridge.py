@@ -829,7 +829,13 @@ class MemUBridge:
                     # conversations as instructions, generating long off-topic
                     # responses that exceed the per-call timeout.
                     "preprocess_llm_profile": fast_profile,
-                    "memory_extract_llm_profile": memorize_profile,
+                    # When no embedding provider is configured, all memory
+                    # work goes through Anthropic — use Haiku for extraction
+                    # too to avoid saturating the rate-limit budget.
+                    "memory_extract_llm_profile": (
+                        fast_profile if not self.config.openai_api_key
+                        else memorize_profile
+                    ),
                     "category_update_llm_profile": fast_profile,
                     # Pass Nerve's configured categories to memU so the LLM
                     # prompt only shows categories that actually exist in the
@@ -855,9 +861,14 @@ class MemUBridge:
                     },
                 },
                 retrieve_config={
+                    "method": "llm" if not self.config.openai_api_key else "rag",
                     "route_intention": False,
                     "sufficiency_check": False,
                     "resource": {"enabled": False},
+                    # Use Haiku for LLM-based ranking — cheaper and avoids
+                    # sharing Sonnet's rate-limit budget with the main agent.
+                    **({"llm_ranking_llm_profile": fast_profile}
+                       if not self.config.openai_api_key else {}),
                 },
             )
             self._available = True
@@ -886,6 +897,104 @@ class MemUBridge:
                 logger.info(
                     "Populated category mapping: %d categories",
                     len(ctx.category_name_to_id),
+                )
+
+            # When no embedding provider is configured, replace the
+            # memorize pipeline's "categorize_items" step with one that
+            # stores items and resources with embedding=None.  This
+            # avoids KeyError on the missing "embedding" LLM profile.
+            if not self.config.openai_api_key:
+                from memu.workflow.step import WorkflowStep as _WfStep
+
+                _svc = self._service
+
+                async def _categorize_no_embed(
+                    state: dict, step_context: Any,
+                ) -> dict:
+                    svc_ctx = state["ctx"]
+                    store = state["store"]
+                    modality = state["modality"]
+                    local_path = state["local_path"]
+                    resources: list = []
+                    items: list = []
+                    relations: list = []
+                    category_updates: dict[str, list[tuple[str, str]]] = {}
+                    user_scope = state.get("user", {})
+
+                    for plan in state.get("resource_plans", []):
+                        caption_text = (plan.get("caption") or "").strip() or None
+                        res = store.resource_repo.create_resource(
+                            url=plan["resource_url"],
+                            modality=modality,
+                            local_path=local_path,
+                            caption=caption_text,
+                            embedding=None,
+                            user_data=dict(user_scope or {}),
+                        )
+                        resources.append(res)
+
+                        entries = plan.get("entries") or []
+                        if not entries:
+                            continue
+
+                        reinforce = _svc.memorize_config.enable_item_reinforcement
+                        for memory_type, summary_text, cat_names in entries:
+                            item = store.memory_item_repo.create_item(
+                                resource_id=res.id,
+                                memory_type=memory_type,
+                                summary=summary_text,
+                                embedding=None,
+                                user_data=dict(user_scope or {}),
+                                reinforce=reinforce,
+                            )
+                            items.append(item)
+                            if reinforce and item.extra.get(
+                                "reinforcement_count", 1,
+                            ) > 1:
+                                continue
+                            mapped = _svc._map_category_names_to_ids(
+                                cat_names, svc_ctx,
+                            )
+                            for cid in mapped:
+                                relations.append(
+                                    store.category_item_repo.link_item_category(
+                                        item.id, cid,
+                                        user_data=dict(user_scope or {}),
+                                    )
+                                )
+                                category_updates.setdefault(cid, []).append(
+                                    (item.id, summary_text),
+                                )
+
+                    state.update({
+                        "resources": resources,
+                        "items": items,
+                        "relations": relations,
+                        "category_updates": category_updates,
+                    })
+                    return state
+
+                self._service.replace_step(
+                    target_step_id="categorize_items",
+                    new_step=_WfStep(
+                        step_id="categorize_items",
+                        role="categorize",
+                        handler=_categorize_no_embed,
+                        requires={
+                            "resource_plans", "ctx", "store",
+                            "local_path", "modality", "user",
+                        },
+                        produces={
+                            "resources", "items",
+                            "relations", "category_updates",
+                        },
+                        capabilities={"db"},
+                    ),
+                    pipeline="memorize",
+                )
+                logger.info(
+                    "No embedding provider — replaced memorize categorize_items "
+                    "step (embeddings disabled, using LLM-based recall)"
                 )
 
             # Warm up the Anthropic LLM clients.  The first HTTP request on
@@ -1859,10 +1968,15 @@ class MemUBridge:
         if not self._available or not self._service:
             return False
         try:
-            # Generate embedding for the category
-            embed_text = f"{name}: {description}" if description else name
-            vecs = await self._service._get_llm_client("embedding").embed([embed_text])
-            embedding = vecs[0]
+            # Generate embedding for the category (requires OpenAI key)
+            embedding = None
+            if self._has_embeddings:
+                try:
+                    embed_text = f"{name}: {description}" if description else name
+                    vecs = await self._service._get_llm_client("embedding").embed([embed_text])
+                    embedding = vecs[0]
+                except Exception as e:
+                    logger.warning("Could not embed category %s: %s", name, e)
 
             # Create in the DB repo
             cat = self._service.database.memory_category_repo.get_or_create_category(
@@ -1912,17 +2026,23 @@ class MemUBridge:
             new_desc = description if description is not None else cat.description
             new_summary = summary if summary is not None else cat.summary
 
-            # Re-embed from the updated text
-            embed_text = f"{new_name}: {new_desc}"
-            if new_summary:
-                embed_text += f"\n{new_summary}"
-            vecs = await self._service._get_llm_client("embedding").embed([embed_text])
+            # Re-embed from the updated text (requires OpenAI key)
+            embedding = None
+            if self._has_embeddings:
+                try:
+                    embed_text = f"{new_name}: {new_desc}"
+                    if new_summary:
+                        embed_text += f"\n{new_summary}"
+                    vecs = await self._service._get_llm_client("embedding").embed([embed_text])
+                    embedding = vecs[0]
+                except Exception as e:
+                    logger.warning("Could not re-embed category %s: %s", category_id, e)
 
             repo.update_category(
                 category_id=category_id,
                 description=new_desc if description is not None else None,
                 summary=new_summary if summary is not None else None,
-                embedding=vecs[0],
+                embedding=embedding,
             )
             logger.info("Updated category: %s", category_id)
             await self._audit("category_updated", "category", category_id, source, {
@@ -2097,3 +2217,8 @@ class MemUBridge:
     @property
     def available(self) -> bool:
         return self._available
+
+    @property
+    def _has_embeddings(self) -> bool:
+        """Whether an embedding provider (e.g. OpenAI) is configured."""
+        return bool(self.config.openai_api_key)

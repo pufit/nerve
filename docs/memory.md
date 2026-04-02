@@ -78,17 +78,19 @@ Reinforced items rank higher in search results via salience-aware ranking: `simi
 
 ### Configuration
 
-memU uses three LLM profiles:
+memU uses two or three LLM profiles depending on configuration:
 - **Chat** — Anthropic API for recall routing (claude-sonnet-4-6)
 - **Fast** — Anthropic API for fact extraction and categorization (claude-haiku-4-5)
-- **Embedding** — OpenAI text-embedding-3-small for vector search
+- **Embedding** *(optional)* — OpenAI text-embedding-3-small for vector search. Only active when `openai_api_key` is set.
+
+When no OpenAI key is configured, memU uses **LLM-based recall** instead of vector search — the Chat profile ranks memories directly, requiring no embeddings. This uses more Anthropic API tokens per recall but removes the OpenAI dependency entirely.
 
 Config in `config.yaml`:
 ```yaml
 memory:
   chat_model: claude-sonnet-4-6       # recall routing
   fast_model: claude-haiku-4-5-20251001  # extraction & categorization
-  embed_model: text-embedding-3-small
+  # embed_model: text-embedding-3-small  # only needed with openai_api_key
   categories: [...]  # see Categories section above
 ```
 
@@ -102,10 +104,11 @@ This uses the `anthropic` Python SDK directly (not the OpenAI-compatible endpoin
 
 ### Performance Optimizations
 
-- **Vector cache** — All item and category embeddings are preloaded into memory at startup, eliminating repeated SQLite JSON parsing (~2s per search saved)
+- **Vector cache** *(with OpenAI key)* — All item and category embeddings are preloaded into memory at startup, eliminating repeated SQLite JSON parsing (~2s per search saved)
 - **Fast model** — Extraction and category summary updates use Haiku instead of Sonnet
 - **Disabled pipeline steps** — Route intention, sufficiency checks, and resource retrieval are disabled in the retrieve pipeline (saves 3+ LLM calls per recall)
-- **Category embedding reuse** — Category ranking uses stored embeddings instead of re-embedding summaries on every recall
+- **Category embedding reuse** *(with OpenAI key)* — Category ranking uses stored embeddings instead of re-embedding summaries on every recall
+- **LLM-based fallback** — When no embedding provider is configured, retrieval and memorization work without embeddings; semantic deduplication falls back to content-hash only
 - **Client warmup** — Anthropic LLM clients are pinged during startup to force HTTP/2 connection establishment (avoids a cold-start hang on the first memorize call)
 - **Memorize timeout** — Each memorize call is capped at 300s; if it hangs, it is cancelled, LLM clients are evicted (cache cleared + HTTP transport closed), a fresh client is created, and one retry is attempted
 - **Per-call LLM timeout** — Base LLM client `.chat()` methods are wrapped with a 120s `asyncio.wait_for()` at init time (instance attribute shadowing). A single dead HTTP/2 connection fails fast instead of consuming the entire 300s pipeline budget. Hung calls log `memU LLM HUNG [profile]: no response after 120s (prompt=N chars)`
@@ -149,7 +152,7 @@ Delete a memory item. Use for wrong, duplicate, or stale memories.
 ```
 category_update(category_id="abc123", summary="Updated summary", description="New description")
 ```
-Update a category's summary and/or description. Re-embeds the category after update to keep vector search in sync.
+Update a category's summary and/or description. Re-embeds the category after update to keep vector search in sync (when an embedding provider is configured).
 
 All recall and history results include memory IDs (`id:abc123...`), enabling the agent to target specific items for update or deletion.
 

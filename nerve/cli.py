@@ -622,9 +622,9 @@ def doctor_report(config) -> str:
         errors.append("[ERR] Anthropic API key not set and proxy not enabled (config.local.yaml)")
 
     if config.openai_api_key:
-        lines.append(f"[OK] OpenAI API key: ...{config.openai_api_key[-4:]}")
+        lines.append(f"[OK] OpenAI API key: ...{config.openai_api_key[-4:]} (vector embeddings enabled)")
     else:
-        warnings.append("[WARN] OpenAI API key not set (needed for memU embeddings)")
+        lines.append("[--] OpenAI API key not set (using LLM-based memory recall)")
 
     # Check Telegram
     if config.telegram.enabled:

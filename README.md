@@ -146,7 +146,7 @@ Two layers, one seamless experience.
 Curated facts injected into every system prompt. Active projects, current deadlines, operational lessons. Tagged with dates, automatically evicted when stale.
 
 **L2 — Deep Memory (memU)**
-Semantic search over everything — conversations, facts, preferences, events. SQLite-persisted with `text-embedding-3-small` embeddings.
+Semantic search over everything — conversations, facts, preferences, events. SQLite-persisted. Uses vector embeddings when an OpenAI key is configured, or LLM-based ranking with Anthropic models only.
 
 - Four memory types: `profile`, `event`, `knowledge`, `behavior`
 - Automatic conversation indexing on session close
@@ -254,7 +254,7 @@ See [docs/config.md](docs/config.md) for all options.
 - [Node.js](https://nodejs.org/) 18+ (for web UI build)
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview) (bundled with `claude-agent-sdk`)
 - Anthropic API key **or** Claude subscription via [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) proxy
-- Optional: OpenAI API key (for memU embeddings), Telegram bot token, [gog](https://github.com/googleworkspace/cli) CLI, [gh](https://cli.github.com/) CLI
+- Optional: OpenAI API key (for vector-based memory search — without it, LLM-based recall is used), Telegram bot token, [gog](https://github.com/googleworkspace/cli) CLI, [gh](https://cli.github.com/) CLI
 
 ## Documentation
 

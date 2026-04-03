@@ -86,7 +86,7 @@ class ChannelRouter:
 
     # Debounce window (seconds) for collecting simultaneous messages
     # (e.g. forwarded messages, rapid-fire sends) into a single batch.
-    BATCH_DEBOUNCE = 0.15
+    BATCH_DEBOUNCE = 0.60
 
     async def handle_message(self, msg: InboundMessage) -> str:
         """Process an inbound user message.

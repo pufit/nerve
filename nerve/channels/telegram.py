@@ -1102,6 +1102,18 @@ class TelegramChannel(BaseChannel):
         if doc_contents:
             images.extend(doc_contents)
 
+        # Extract attachments from replied-to message (images, documents, PDFs)
+        reply_msg = getattr(update.message, "reply_to_message", None)
+        if reply_msg:
+            reply_image = await self._extract_image(reply_msg)
+            if reply_image:
+                images.append(reply_image)
+            reply_doc_contents, reply_doc_ctx = await self._extract_document(reply_msg)
+            if reply_doc_ctx:
+                text = f"{reply_doc_ctx}\n\n{text}" if text else reply_doc_ctx
+            if reply_doc_contents:
+                images.extend(reply_doc_contents)
+
         if not text and not images:
             return
 
@@ -1256,6 +1268,18 @@ class TelegramChannel(BaseChannel):
             image = await self._extract_image(u.message)
             if image:
                 images.append(image)
+
+        # Extract attachments from replied-to message (images, documents, PDFs)
+        reply_msg = getattr(updates[0].message, "reply_to_message", None)
+        if reply_msg:
+            reply_image = await self._extract_image(reply_msg)
+            if reply_image:
+                images.append(reply_image)
+            reply_doc_contents, reply_doc_ctx = await self._extract_document(reply_msg)
+            if reply_doc_ctx:
+                text = f"{reply_doc_ctx}\n\n{text}" if text else reply_doc_ctx
+            if reply_doc_contents:
+                images.extend(reply_doc_contents)
 
         if not text and not images:
             return

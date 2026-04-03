@@ -51,6 +51,8 @@ export const api = {
 
   checkAuth: () => request<{ authenticated: boolean }>('/auth/check'),
 
+  authStatus: () => request<{ auth_required: boolean }>('/auth/status'),
+
   // Sessions
   listSessions: () => request<{ sessions: any[] }>('/sessions'),
   searchSessions: (q: string) =>

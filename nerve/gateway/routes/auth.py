@@ -34,6 +34,13 @@ async def login(req: LoginRequest):
     return LoginResponse(token=token)
 
 
+@router.get("/api/auth/status")
+async def auth_status():
+    """Return whether authentication is required (password configured)."""
+    config = get_config()
+    return {"auth_required": bool(config.auth.password_hash and config.auth.jwt_secret)}
+
+
 @router.get("/api/auth/check")
 async def check_auth(user: dict = Depends(require_auth)):
     return {"authenticated": True}

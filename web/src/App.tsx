@@ -24,7 +24,7 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { NotificationToast } from './components/Notifications/NotificationToast';
 
 function App() {
-  const { authenticated, checkAuth } = useAuthStore();
+  const { authenticated, checking, checkAuth } = useAuthStore();
   const { handleWSMessage, loadSessions } = useChatStore();
 
   useEffect(() => { checkAuth(); }, []);
@@ -37,6 +37,7 @@ function App() {
     return () => { unsub(); ws.disconnect(); };
   }, [authenticated]);
 
+  if (checking) return null;
   if (!authenticated) return <LoginPage />;
 
   return (

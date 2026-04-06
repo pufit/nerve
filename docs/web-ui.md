@@ -12,8 +12,17 @@ web/src/
 │   ├── client.ts       # REST API client with JWT auth
 │   └── websocket.ts    # WebSocket client with auto-reconnect
 ├── stores/
+│   ├── chatStore.ts    # Chat/session state + thin WS dispatcher (Zustand)
+│   ├── handlers/       # Domain-specific WebSocket message handlers
+│   │   ├── streamingHandlers.ts  # thinking, token, tool_use, tool_result, done, stopped, error
+│   │   ├── sessionHandlers.ts    # session lifecycle (updated/status/switched/forked/resumed/archived/running)
+│   │   ├── panelHandlers.ts      # plan_update, subagent_start/complete, hoa_progress
+│   │   ├── auxiliaryHandlers.ts  # interaction, file_changed, notifications, background_tasks
+│   │   └── types.ts              # Shared Get/Set type aliases for handlers
+│   ├── helpers/        # Stateless utility functions for chat state
+│   │   ├── blockHelpers.ts       # Panel block append/update, auto-close timers
+│   │   └── bufferReplay.ts       # Session reconnect replay, deriveStatus, extractTodos
 │   ├── authStore.ts    # Auth state (Zustand)
-│   ├── chatStore.ts    # Chat/session state (Zustand)
 │   ├── taskStore.ts    # Task list/detail state (Zustand)
 │   └── skillsStore.ts  # Skills CRUD + usage stats (Zustand)
 ├── components/
@@ -146,6 +155,6 @@ cd web && npx vite build
 
 Uses Zustand for lightweight state management:
 - `authStore` — Login/logout, token management
-- `chatStore` — Sessions, messages, streaming state, agent status, side panel state (tabs, visibility, width), pending interactions (mid-turn user input), sidebar collapsed state, text selection quotes, modified files tracking
+- `chatStore` — Sessions, messages, streaming state, agent status, side panel state (tabs, visibility, width), pending interactions (mid-turn user input), sidebar collapsed state, text selection quotes, modified files tracking. WebSocket message handling is dispatched to domain-specific handler modules under `handlers/`, with stateless helpers under `helpers/`.
 - `taskStore` — Task list, search, filters, detail view with content editing
 - `skillsStore` — Skills list with usage stats, detail view with SKILL.md editor, create/update/delete/toggle, filesystem sync

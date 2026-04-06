@@ -99,6 +99,9 @@ nerve/
 │   │   ├── components/ # React components
 │   │   ├── pages/      # Route pages
 │   │   ├── stores/     # Zustand state stores
+│   │   │   ├── chatStore.ts    # Chat state + thin WS dispatcher
+│   │   │   ├── handlers/       # Domain-specific WS message handlers
+│   │   │   └── helpers/        # Stateless helpers (block ops, buffer replay)
 │   │   ├── api/        # API client utilities
 │   │   └── types/      # TypeScript definitions
 │   └── package.json

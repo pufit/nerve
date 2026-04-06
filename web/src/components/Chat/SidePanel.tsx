@@ -17,7 +17,7 @@ const TAB_ICONS: Record<string, typeof Bot> = {
 const TAB_COLORS: Record<string, string> = {
   Plan: 'text-amber-400',
   Explore: 'text-cyan-400',
-  'general-purpose': 'text-indigo-400',
+  'general-purpose': 'text-accent',
   files: 'text-teal-400',
 };
 
@@ -130,7 +130,7 @@ function TabHeader({ tab, onClose }: { tab: PanelTab; onClose: () => void }) {
 // ------------------------------------------------------------------ //
 
 function TabContent({ tab, containerRef }: { tab: PanelTab; containerRef: React.RefObject<HTMLDivElement | null> }) {
-  const cursorColor = tab.type === 'plan' ? 'bg-amber-400' : 'bg-indigo-400';
+  const cursorColor = tab.type === 'plan' ? 'bg-amber-400' : 'bg-accent';
   const hasBlocks = tab.blocks.length > 0;
   const endRef = useRef<HTMLDivElement>(null);
   const isNearBottom = useRef(true);
@@ -313,7 +313,7 @@ export function SidePanel() {
       {/* Resize handle */}
       <div
         onMouseDown={handleResizeStart}
-        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-indigo-500/30 z-10"
+        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-accent/30 z-10"
       />
 
       {/* Tab bar (when multiple tabs) */}

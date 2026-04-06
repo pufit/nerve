@@ -14,7 +14,7 @@ const AGENT_ICONS: Record<string, typeof Bot> = {
 const AGENT_COLORS: Record<string, string> = {
   Explore: 'text-cyan-400',
   Plan: 'text-amber-400',
-  'general-purpose': 'text-indigo-400',
+  'general-purpose': 'text-accent',
 };
 
 export function SubagentToolBlock({ block }: { block: ToolCallBlockData }) {
@@ -73,7 +73,7 @@ export function SubagentToolBlock({ block }: { block: ToolCallBlockData }) {
       {/* Compact card header */}
       <div className="flex items-center gap-2 px-3 py-2">
         {isRunning
-          ? <Loader2 size={14} className="text-indigo-400 animate-spin shrink-0" />
+          ? <Loader2 size={14} className="text-accent animate-spin shrink-0" />
           : <Icon size={14} className={`shrink-0 ${block.isError ? 'text-red-400' : color}`} />
         }
         <span className={`text-[13px] font-medium ${color}`}>{subagentType}</span>

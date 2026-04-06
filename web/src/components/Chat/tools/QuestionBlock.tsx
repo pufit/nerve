@@ -94,21 +94,21 @@ export function QuestionBlock({ block }: { block: ToolCallBlockData }) {
 
   return (
     <div className="question-block my-2">
-      <div className="border border-indigo-500/20 rounded-lg bg-[#111118] overflow-hidden">
+      <div className="border border-accent/20 rounded-lg bg-bg-sunken overflow-hidden">
         {questions.map((q, qIdx) => (
-          <div key={qIdx} className={qIdx > 0 ? 'border-t border-[#1a1a2a]' : ''}>
+          <div key={qIdx} className={qIdx > 0 ? 'border-t border-border-subtle' : ''}>
             {/* Question header */}
             <div className="px-4 pt-3.5 pb-2">
               <div className="flex items-center gap-2 mb-2">
-                <MessageCircleQuestion size={15} className="text-indigo-400 shrink-0" />
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-400/70 bg-indigo-500/10 px-2 py-0.5 rounded">
+                <MessageCircleQuestion size={15} className="text-accent shrink-0" />
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-accent/70 bg-accent/10 px-2 py-0.5 rounded">
                   {q.header}
                 </span>
                 {q.multiSelect && (
                   <span className="text-[10px] text-text-faint ml-auto">Select multiple</span>
                 )}
               </div>
-              <p className="text-[14px] text-[#ddd] leading-relaxed">{q.question}</p>
+              <p className="text-[14px] text-text-secondary leading-relaxed">{q.question}</p>
             </div>
 
             {/* Options */}
@@ -127,21 +127,21 @@ export function QuestionBlock({ block }: { block: ToolCallBlockData }) {
                       className={`question-option w-full text-left px-3.5 py-2.5 rounded-md border transition-all duration-150 ${
                         submitted
                           ? isSelected
-                            ? 'border-indigo-500/40 bg-indigo-500/10 cursor-default'
+                            ? 'border-accent/40 bg-accent/10 cursor-default'
                             : 'border-surface-raised bg-bg-sunken opacity-40 cursor-default'
                           : isSelected
-                            ? 'border-indigo-500/50 bg-indigo-500/10 cursor-pointer'
+                            ? 'border-accent/50 bg-accent/10 cursor-pointer'
                             : 'border-border-subtle bg-bg-sunken hover:border-border hover:bg-surface cursor-pointer'
                       }`}
                     >
                       <div className="flex items-start gap-3">
                         <div className={`mt-0.5 shrink-0 w-4 h-4 ${q.multiSelect ? 'rounded-sm' : 'rounded-full'} border flex items-center justify-center transition-colors duration-150 ${
-                          isSelected ? 'border-indigo-500 bg-indigo-500' : 'border-text-faint bg-transparent'
+                          isSelected ? 'border-accent bg-accent' : 'border-text-faint bg-transparent'
                         }`}>
                           {isSelected && <Check size={10} className="text-white" strokeWidth={3} />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className={`text-[13px] font-medium ${isSelected ? 'text-indigo-300' : 'text-text-secondary'}`}>
+                          <div className={`text-[13px] font-medium ${isSelected ? 'text-accent-text' : 'text-text-secondary'}`}>
                             {opt.label}
                           </div>
                           {opt.description && (
@@ -152,7 +152,7 @@ export function QuestionBlock({ block }: { block: ToolCallBlockData }) {
                     </button>
 
                     {opt.markdown && (isHovered || (isSelected && !submitted)) && (
-                      <div className="mx-2 mt-1 mb-0.5 px-3 py-2 bg-[#0a0a0e] border border-[#1e1e28] rounded text-[12px] max-h-48 overflow-y-auto">
+                      <div className="mx-2 mt-1 mb-0.5 px-3 py-2 bg-bg border border-border-subtle rounded text-[12px] max-h-48 overflow-y-auto">
                         <MarkdownContent content={opt.markdown} />
                       </div>
                     )}
@@ -171,8 +171,8 @@ export function QuestionBlock({ block }: { block: ToolCallBlockData }) {
               disabled={!allAnswered}
               className={`w-full py-2 rounded-md text-[13px] font-medium transition-all duration-150 flex items-center justify-center gap-2 ${
                 allAnswered
-                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer'
-                  : 'bg-[#1a1a22] text-text-faint cursor-not-allowed'
+                  ? 'bg-accent hover:bg-accent-hover text-white cursor-pointer'
+                  : 'bg-surface text-text-faint cursor-not-allowed'
               }`}
             >
               <Send size={13} />
@@ -183,7 +183,7 @@ export function QuestionBlock({ block }: { block: ToolCallBlockData }) {
 
         {/* Answered confirmation */}
         {submitted && (
-          <div className="px-4 py-2 border-t border-indigo-500/10 flex items-center gap-2">
+          <div className="px-4 py-2 border-t border-accent/10 flex items-center gap-2">
             <Check size={12} className="text-green-400" />
             <span className="text-[11px] text-green-400/70">Answered</span>
           </div>

@@ -121,7 +121,7 @@ export function PlanDetailPage() {
           {plan.model && <span>{plan.model}</span>}
           <button
             onClick={() => navigate(`/tasks/${plan.task_id}`)}
-            className="flex items-center gap-1 text-[#6366f1] hover:text-[#818cf8] cursor-pointer"
+            className="flex items-center gap-1 text-accent hover:text-link cursor-pointer"
           >
             <ExternalLink size={11} /> View task
           </button>
@@ -146,9 +146,9 @@ export function PlanDetailPage() {
           {/* Feedback from previous revision — quote style */}
           {plan.feedback && (
             <div className="mt-4 flex gap-0">
-              <div className="w-1 bg-[#6366f1]/40 rounded-full shrink-0" />
+              <div className="w-1 bg-accent/40 rounded-full shrink-0" />
               <div className="pl-3 py-2">
-                <div className="text-[11px] text-[#6366f1]/60 font-medium mb-1">Revision feedback</div>
+                <div className="text-[11px] text-accent/60 font-medium mb-1">Revision feedback</div>
                 <div className="text-[13px] text-text-muted leading-relaxed whitespace-pre-wrap">{plan.feedback}</div>
               </div>
             </div>
@@ -180,7 +180,7 @@ export function PlanDetailPage() {
                         <select
                           value={hoaMode}
                           onChange={e => setHoaMode(e.target.value)}
-                          className="px-2 py-1 text-[12px] bg-surface-raised border border-border-subtle rounded text-text-secondary focus:outline-none focus:border-[#6366f1]/50"
+                          className="px-2 py-1 text-[12px] bg-surface-raised border border-border-subtle rounded text-text-secondary focus:outline-none focus:border-accent/50"
                         >
                           <option value="relay">Relay</option>
                           <option value="swarm">Swarm</option>
@@ -193,7 +193,7 @@ export function PlanDetailPage() {
                           value={hoaAgents}
                           onChange={e => setHoaAgents(e.target.value)}
                           placeholder="Claude, OpenAI"
-                          className="px-2 py-1 text-[12px] bg-surface-raised border border-border-subtle rounded text-text-secondary placeholder-[#555] focus:outline-none focus:border-[#6366f1]/50 w-40"
+                          className="px-2 py-1 text-[12px] bg-surface-raised border border-border-subtle rounded text-text-secondary placeholder:text-placeholder focus:outline-none focus:border-accent/50 w-40"
                         />
                       </div>
                     </div>
@@ -232,13 +232,13 @@ export function PlanDetailPage() {
               {showFeedback && (
                 <div className="space-y-2">
                   <div className="flex gap-0">
-                    <div className="w-1 bg-[#6366f1]/30 rounded-full shrink-0" />
+                    <div className="w-1 bg-accent/30 rounded-full shrink-0" />
                     <div className="flex-1 pl-3">
                       <textarea
                         value={feedback}
                         onChange={e => setFeedback(e.target.value)}
                         placeholder="Describe what to change..."
-                        className="w-full p-3 text-[13px] bg-surface-raised border border-border-subtle rounded-lg text-text-secondary placeholder-[#555] focus:outline-none focus:border-[#6366f1]/50 resize-none"
+                        className="w-full p-3 text-[13px] bg-surface-raised border border-border-subtle rounded-lg text-text-secondary placeholder:text-placeholder focus:outline-none focus:border-accent/50 resize-none"
                         rows={3}
                         autoFocus
                       />
@@ -248,7 +248,7 @@ export function PlanDetailPage() {
                     <button
                       onClick={handleRevise}
                       disabled={actionLoading || !feedback.trim()}
-                      className="px-4 py-2 text-[13px] bg-[#6366f1] hover:bg-[#818cf8] disabled:opacity-50 text-white rounded-lg cursor-pointer"
+                      className="px-4 py-2 text-[13px] bg-accent hover:bg-accent-hover disabled:opacity-50 text-white rounded-lg cursor-pointer"
                     >
                       Send Revision Request
                     </button>

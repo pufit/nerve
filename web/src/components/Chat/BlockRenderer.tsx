@@ -10,7 +10,7 @@ interface BlockRendererProps {
   blocks: MessageBlock[];
   /** Show streaming cursor on last block + streaming prop on last ThinkingBlock. */
   streaming?: boolean;
-  /** Tailwind bg class for text cursor (default: 'bg-[#6366f1]'). */
+  /** Tailwind bg class for text cursor (default: 'bg-accent'). */
   cursorColor?: string;
   /** Optional wrapper class for text blocks (e.g. 'text-[13px] my-1'). */
   textClassName?: string;
@@ -19,7 +19,7 @@ interface BlockRendererProps {
 export function BlockRenderer({
   blocks,
   streaming = false,
-  cursorColor = 'bg-[#6366f1]',
+  cursorColor = 'bg-accent',
   textClassName,
 }: BlockRendererProps) {
   const renderItems = useMemo(() => groupToolCalls(blocks), [blocks]);

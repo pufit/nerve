@@ -119,7 +119,7 @@ function SourceSidebar() {
         {(['inbox', 'runs', 'consumers'] as const).map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`flex-1 py-2 text-[12px] font-medium transition-colors cursor-pointer
-              ${activeTab === tab ? 'text-[#6366f1] border-b-2 border-[#6366f1]' : 'text-text-dim hover:text-text-muted'}`}>
+              ${activeTab === tab ? 'text-accent border-b-2 border-accent' : 'text-text-dim hover:text-text-muted'}`}>
             {tab === 'inbox' ? 'Inbox' : tab === 'runs' ? 'Runs' : 'Consumers'}
           </button>
         ))}
@@ -129,7 +129,7 @@ function SourceSidebar() {
       <div className="p-2 space-y-1">
         <button onClick={() => setActiveSource(null)}
           className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-[13px] transition-colors cursor-pointer
-            ${activeSource === null ? 'bg-[#6366f1]/15 text-[#6366f1]' : 'text-text-muted hover:text-text-secondary hover:bg-surface-raised'}`}>
+            ${activeSource === null ? 'bg-accent/15 text-accent' : 'text-text-muted hover:text-text-secondary hover:bg-surface-raised'}`}>
           <span className="flex items-center gap-2"><Inbox size={14} /> All</span>
           <span className="text-[11px] opacity-70 tabular-nums shrink-0">{totalMessages}</span>
         </button>
@@ -140,7 +140,7 @@ function SourceSidebar() {
             <div key={src} className="group">
               <button onClick={() => setActiveSource(src)}
                 className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-[13px] transition-colors cursor-pointer
-                  ${activeSource === src ? 'bg-[#6366f1]/15 text-[#6366f1]' : 'text-text-muted hover:text-text-secondary hover:bg-surface-raised'}`}>
+                  ${activeSource === src ? 'bg-accent/15 text-accent' : 'text-text-muted hover:text-text-secondary hover:bg-surface-raised'}`}>
                 <span className="flex items-center gap-1.5 min-w-0 truncate">
                   {sourceIcon(src)}
                   <span className="truncate">{sourceLabel(src)}</span>
@@ -295,7 +295,7 @@ function MessageList() {
         return (
           <button key={`${msg.source}:${msg.id}`} onClick={() => selectMessage(msg.source, msg.id)}
             className={`w-full text-left px-3 py-2.5 border-b border-border-subtle transition-colors cursor-pointer
-              ${isSelected ? 'bg-[#6366f1]/10 border-l-2 border-l-[#6366f1]' : 'hover:bg-surface'}`}>
+              ${isSelected ? 'bg-accent/10 border-l-2 border-l-accent' : 'hover:bg-surface'}`}>
             <div className="flex items-center gap-2 mb-0.5">
               <span className={`text-[10px] px-1.5 py-0.5 rounded ${sourceBadgeColor(msg.source)}`}>
                 {msg.source.split(':')[0]}
@@ -376,7 +376,7 @@ function RunsList() {
             type="checkbox"
             checked={hideEmpty}
             onChange={(e) => setHideEmpty(e.target.checked)}
-            className="accent-[#6366f1] cursor-pointer"
+            className="accent-accent cursor-pointer"
           />
           Hide empty
         </label>
@@ -398,7 +398,7 @@ function RunsList() {
               return (
                 <tr key={run.id} onClick={() => selectRun(run)}
                   className={`border-t border-border-subtle cursor-pointer transition-colors
-                    ${isSelected ? 'bg-[#6366f1]/10' : 'hover:bg-surface'}`}>
+                    ${isSelected ? 'bg-accent/10' : 'hover:bg-surface'}`}>
                   <td className="px-3 py-2">
                     <span className="flex items-center gap-1.5">
                       {sourceIcon(run.source)}
@@ -484,7 +484,7 @@ function RunDetail() {
         {/* Session link */}
         {run.session_id && (
           <button onClick={() => navigate(`/chat/${run.session_id}`)}
-            className="flex items-center gap-1.5 mt-2 text-[12px] text-[#6366f1] hover:text-[#818cf8] transition-colors cursor-pointer">
+            className="flex items-center gap-1.5 mt-2 text-[12px] text-accent hover:text-link transition-colors cursor-pointer">
             <ExternalLink size={12} /> View processing session
           </button>
         )}
@@ -566,7 +566,7 @@ function MessageDetail() {
         {/* Session link */}
         {msg.run_session_id && (
           <button onClick={() => navigate(`/chat/${msg.run_session_id}`)}
-            className="flex items-center gap-1.5 mt-2 text-[12px] text-[#6366f1] hover:text-[#818cf8] transition-colors cursor-pointer">
+            className="flex items-center gap-1.5 mt-2 text-[12px] text-accent hover:text-link transition-colors cursor-pointer">
             <ExternalLink size={12} /> View processing session
           </button>
         )}

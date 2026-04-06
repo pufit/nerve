@@ -38,12 +38,12 @@ export function NotificationToast() {
               {isQuestion ? (
                 <HelpCircle size={16} className="text-blue-400 shrink-0 mt-0.5" />
               ) : (
-                <Bell size={16} className="text-[#6366f1] shrink-0 mt-0.5" />
+                <Bell size={16} className="text-accent shrink-0 mt-0.5" />
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <p
-                    className="text-sm font-medium text-text cursor-pointer hover:text-[#6366f1]"
+                    className="text-sm font-medium text-text cursor-pointer hover:text-accent"
                     onClick={() => {
                       navigate('/notifications');
                       dismissToast(notif.id);
@@ -71,7 +71,7 @@ export function NotificationToast() {
                           answerNotification(notif.id, opt);
                           dismissToast(notif.id);
                         }}
-                        className="px-2 py-0.5 bg-[#6366f1]/15 text-[#6366f1] rounded text-xs border border-[#6366f1]/30 hover:bg-[#6366f1]/25 cursor-pointer"
+                        className="px-2 py-0.5 bg-accent/15 text-accent rounded text-xs border border-accent/30 hover:bg-accent/25 cursor-pointer"
                       >
                         {opt}
                       </button>

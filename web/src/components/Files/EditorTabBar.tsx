@@ -21,13 +21,13 @@ export function EditorTabBar({ files, activePath, onSelect, onClose }: {
           key={f.path}
           className={`flex items-center gap-1.5 px-3 py-2 text-[13px] cursor-pointer border-r border-border-subtle shrink-0
             ${f.path === activePath
-              ? 'bg-bg text-text border-b-2 border-b-[#6366f1]'
+              ? 'bg-bg text-text border-b-2 border-b-accent'
               : 'text-text-muted hover:text-text-secondary hover:bg-surface-raised'
             }`}
           onClick={() => onSelect(f.path)}
         >
           <span>{f.name}</span>
-          {f.modified && <span className="w-1.5 h-1.5 rounded-full bg-[#6366f1]" />}
+          {f.modified && <span className="w-1.5 h-1.5 rounded-full bg-accent" />}
           <button
             onClick={(e) => { e.stopPropagation(); onClose(f.path); }}
             className="p-0.5 hover:bg-border-subtle rounded cursor-pointer"

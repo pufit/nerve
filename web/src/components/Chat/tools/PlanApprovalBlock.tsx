@@ -51,12 +51,12 @@ export function PlanApprovalBlock({ block }: { block: ToolCallBlockData }) {
 
   return (
     <div className="my-2">
-      <div className="border border-indigo-500/20 rounded-lg bg-[#111118] overflow-hidden">
+      <div className="border border-accent/20 rounded-lg bg-bg-sunken overflow-hidden">
         <div className="px-4 py-3">
           <div className="flex items-center gap-2 mb-2">
             {isExitPlan
-              ? <FileCheck size={15} className="text-indigo-400" />
-              : <Play size={15} className="text-indigo-400" />
+              ? <FileCheck size={15} className="text-accent" />
+              : <Play size={15} className="text-accent" />
             }
             <span className="text-[13px] font-medium text-text">
               {isExitPlan
@@ -78,7 +78,7 @@ export function PlanApprovalBlock({ block }: { block: ToolCallBlockData }) {
           <div className="flex gap-2">
             <button
               onClick={() => { setResponded(true); setApproved(true); answerInteraction(null); }}
-              className="flex-1 py-2 rounded-md text-[13px] font-medium bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer transition-colors flex items-center justify-center gap-2"
+              className="flex-1 py-2 rounded-md text-[13px] font-medium bg-accent hover:bg-accent-hover text-white cursor-pointer transition-colors flex items-center justify-center gap-2"
             >
               <Check size={13} />
               {isExitPlan ? 'Approve' : 'Allow'}

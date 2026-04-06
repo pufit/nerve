@@ -23,13 +23,13 @@ export function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
           autoFocus
-          className="w-full px-3 py-2 bg-surface-raised border border-border-subtle rounded text-text outline-none focus:border-[#6366f1] mb-4"
+          className="w-full px-3 py-2 bg-surface-raised border border-border-subtle rounded text-text outline-none focus:border-accent mb-4"
         />
         {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2 bg-[#6366f1] hover:bg-[#818cf8] text-white rounded font-medium disabled:opacity-50 cursor-pointer"
+          className="w-full py-2 bg-accent hover:bg-accent-hover text-white rounded font-medium disabled:opacity-50 cursor-pointer"
         >
           {loading ? '...' : 'Login'}
         </button>

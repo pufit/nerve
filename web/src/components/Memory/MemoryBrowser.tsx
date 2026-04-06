@@ -60,7 +60,7 @@ export function MemoryBrowser() {
             key={f.path}
             onClick={() => openFile(f.path)}
             className={`px-3 py-1.5 text-sm cursor-pointer hover:bg-surface-raised truncate ${
-              f.path === selected ? 'bg-surface-raised border-l-2 border-[#6366f1]' : ''
+              f.path === selected ? 'bg-surface-raised border-l-2 border-accent' : ''
             }`}
           >
             <div className="truncate">{f.name}</div>
@@ -81,7 +81,7 @@ export function MemoryBrowser() {
                     <button
                       onClick={saveFile}
                       disabled={saving}
-                      className="text-xs px-2 py-1 bg-[#6366f1] rounded text-white cursor-pointer"
+                      className="text-xs px-2 py-1 bg-accent rounded text-white cursor-pointer"
                     >
                       {saving ? 'Saving...' : 'Save'}
                     </button>

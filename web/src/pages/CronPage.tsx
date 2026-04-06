@@ -151,7 +151,7 @@ function CronSidebar() {
       <div className="p-2 space-y-1">
         <button onClick={() => selectJob(null)}
           className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-[13px] transition-colors cursor-pointer
-            ${selectedJobId === null ? 'bg-[#6366f1]/15 text-[#6366f1]' : 'text-text-muted hover:text-text-secondary hover:bg-surface-raised'}`}>
+            ${selectedJobId === null ? 'bg-accent/15 text-accent' : 'text-text-muted hover:text-text-secondary hover:bg-surface-raised'}`}>
           <span className="flex items-center gap-2"><Timer size={14} /> All Jobs</span>
           <span className="text-[11px] opacity-70">{jobs.length}</span>
         </button>
@@ -160,7 +160,7 @@ function CronSidebar() {
           <div key={job.id} className={`group ${!job.enabled ? 'opacity-50' : ''}`}>
             <button onClick={() => selectJob(job.id)}
               className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-[13px] transition-colors cursor-pointer
-                ${selectedJobId === job.id ? 'bg-[#6366f1]/15 text-[#6366f1]' : 'text-text-muted hover:text-text-secondary hover:bg-surface-raised'}`}>
+                ${selectedJobId === job.id ? 'bg-accent/15 text-accent' : 'text-text-muted hover:text-text-secondary hover:bg-surface-raised'}`}>
               <span className="flex items-center gap-2 min-w-0 truncate">
                 {jobTypeIcon(job.type)}
                 <span className="truncate">{jobLabel(job)}</span>

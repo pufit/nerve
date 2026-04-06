@@ -60,7 +60,7 @@ function FreeTextInput({ onSubmit }: { onSubmit: (text: string) => void }) {
           }
           if (e.key === 'Escape') setOpen(false);
         }}
-        className="flex-1 bg-surface-raised border border-border-subtle rounded-lg px-3 py-1 text-sm text-text outline-none focus:border-[#6366f1]"
+        className="flex-1 bg-surface-raised border border-border-subtle rounded-lg px-3 py-1 text-sm text-text outline-none focus:border-accent"
         placeholder="Type your answer..."
       />
       <button
@@ -71,7 +71,7 @@ function FreeTextInput({ onSubmit }: { onSubmit: (text: string) => void }) {
             setOpen(false);
           }
         }}
-        className="px-3 py-1 bg-[#6366f1]/15 text-[#6366f1] rounded-lg text-sm border border-[#6366f1]/30 hover:bg-[#6366f1]/25 cursor-pointer"
+        className="px-3 py-1 bg-accent/15 text-accent rounded-lg text-sm border border-accent/30 hover:bg-accent/25 cursor-pointer"
       >
         Send
       </button>
@@ -119,7 +119,7 @@ function NotificationCard({ notif }: { notif: Notification }) {
       <div className="flex items-center gap-3 mt-2 text-[12px]">
         <button
           onClick={() => navigate(`/chat/${notif.session_id}`)}
-          className="text-[#6366f1] hover:underline cursor-pointer"
+          className="text-accent hover:underline cursor-pointer"
         >
           Session: {notif.session_title || notif.session_id}
         </button>
@@ -142,7 +142,7 @@ function NotificationCard({ notif }: { notif: Notification }) {
             <button
               key={opt}
               onClick={() => answerNotification(notif.id, opt)}
-              className="px-3 py-1.5 bg-[#6366f1]/15 text-[#6366f1] rounded-lg text-sm border border-[#6366f1]/30 hover:bg-[#6366f1]/25 cursor-pointer transition-colors"
+              className="px-3 py-1.5 bg-accent/15 text-accent rounded-lg text-sm border border-accent/30 hover:bg-accent/25 cursor-pointer transition-colors"
             >
               {opt}
             </button>
@@ -172,7 +172,7 @@ export function NotificationsPage() {
   return (
     <div className="h-full flex flex-col">
       <div className="border-b border-border-subtle px-6 py-3 flex items-center gap-4 bg-bg shrink-0">
-        <Bell size={18} className="text-[#6366f1]" />
+        <Bell size={18} className="text-accent" />
         <h1 className="text-lg font-semibold">Notifications</h1>
 
         {/* Status filters */}
@@ -183,7 +183,7 @@ export function NotificationsPage() {
               onClick={() => setFilter(f.value)}
               className={`px-3 py-1 text-[12px] rounded-full border cursor-pointer transition-colors
                 ${filter === f.value
-                  ? 'bg-[#6366f1]/15 text-[#6366f1] border-[#6366f1]/30'
+                  ? 'bg-accent/15 text-accent border-accent/30'
                   : 'text-text-dim border-border hover:border-border hover:text-text-muted'
                 }`}
             >
@@ -200,7 +200,7 @@ export function NotificationsPage() {
               onClick={() => setTypeFilter(f.value)}
               className={`px-3 py-1 text-[12px] rounded-full border cursor-pointer transition-colors
                 ${typeFilter === f.value
-                  ? 'bg-[#6366f1]/15 text-[#6366f1] border-[#6366f1]/30'
+                  ? 'bg-accent/15 text-accent border-accent/30'
                   : 'text-text-dim border-border hover:border-border hover:text-text-muted'
                 }`}
             >

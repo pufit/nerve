@@ -4,7 +4,7 @@ import { useChatStore } from '../../stores/chatStore';
 import type { QuoteAction, QuoteEntry } from '../../stores/chatStore';
 
 const ACTION_CONFIG: Record<QuoteAction, { icon: typeof Plus; label: string; color: string; placeholder: string }> = {
-  add:      { icon: Plus,       label: 'Add',     color: '#6366f1', placeholder: 'Instructions...' },
+  add:      { icon: Plus,       label: 'Add',     color: 'var(--theme-accent)', placeholder: 'Instructions...' },
   remove:   { icon: Trash2,     label: 'Remove',  color: '#ef4444', placeholder: 'Instructions...' },
   improve:  { icon: Sparkles,   label: 'Improve', color: '#a855f7', placeholder: 'Instructions...' },
   question: { icon: HelpCircle, label: 'Ask',     color: '#f59e0b', placeholder: 'What do you want to know?' },
@@ -120,7 +120,7 @@ export function ChatInput({ onSend, onStop, isStreaming, disabled }: {
             placeholder={quotes.length > 0 ? 'Add context (optional)...' : 'Send a message...'}
             rows={1}
             disabled={disabled}
-            className="flex-1 px-4 py-3 bg-surface-raised border border-border rounded-xl text-[15px] text-text outline-none focus:border-[#6366f1]/50 resize-none disabled:opacity-50 placeholder:text-text-faint"
+            className="flex-1 px-4 py-3 bg-surface-raised border border-border rounded-xl text-[15px] text-text outline-none focus:border-accent/50 resize-none disabled:opacity-50 placeholder:text-text-faint"
           />
           {isStreaming ? (
             <button
@@ -134,7 +134,7 @@ export function ChatInput({ onSend, onStop, isStreaming, disabled }: {
             <button
               onClick={handleSend}
               disabled={!canSend}
-              className="w-10 h-10 bg-[#6366f1] hover:bg-[#818cf8] text-white rounded-xl flex items-center justify-center disabled:opacity-30 cursor-pointer transition-colors shrink-0"
+              className="w-10 h-10 bg-accent hover:bg-accent-hover text-white rounded-xl flex items-center justify-center disabled:opacity-30 cursor-pointer transition-colors shrink-0"
             >
               <Send size={18} />
             </button>

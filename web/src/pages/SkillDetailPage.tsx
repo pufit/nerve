@@ -100,7 +100,7 @@ export function SkillDetailPage() {
             <button
               onClick={handleSave}
               disabled={actionLoading}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-[#6366f1] text-white rounded hover:bg-[#5558e6] cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-accent text-white rounded hover:bg-accent-hover cursor-pointer disabled:opacity-50"
             >
               <Save size={12} />
               Save
@@ -218,7 +218,7 @@ export function SkillDetailPage() {
               <h3 className="text-xs font-medium text-text-muted mb-2">References</h3>
               <div className="space-y-1">
                 {selectedSkill.references.map(ref => (
-                  <div key={ref} className="text-xs text-[#6366f1] font-mono truncate">{ref}</div>
+                  <div key={ref} className="text-xs text-accent font-mono truncate">{ref}</div>
                 ))}
               </div>
             </div>

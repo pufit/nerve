@@ -90,7 +90,7 @@ function GenericToolBlock({ block }: { block: ToolCallBlockData }) {
         className="flex items-center gap-2 w-full px-3 py-2 text-left cursor-pointer hover:bg-surface-raised transition-colors"
       >
         {isRunning
-          ? <Loader2 size={14} className="text-[#6366f1] animate-spin shrink-0" />
+          ? <Loader2 size={14} className="text-accent animate-spin shrink-0" />
           : <Icon size={14} className={`shrink-0 ${block.isError ? 'text-red-400' : 'text-text-muted'}`} />
         }
         <span className="text-[13px] font-mono font-medium text-text-secondary">{block.tool}</span>

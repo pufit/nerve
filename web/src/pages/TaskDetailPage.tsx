@@ -70,7 +70,7 @@ export function TaskDetailPage() {
         <span>Task not found</span>
         <button
           onClick={() => navigate('/tasks')}
-          className="text-[13px] text-[#6366f1] hover:underline cursor-pointer"
+          className="text-[13px] text-accent hover:underline cursor-pointer"
         >
           Back to tasks
         </button>
@@ -117,7 +117,7 @@ export function TaskDetailPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-[#6366f1] hover:bg-[#818cf8] text-white rounded-md cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-accent hover:bg-accent-hover text-white rounded-md cursor-pointer disabled:opacity-50"
               >
                 <Save size={12} />
                 {saving ? 'Saving...' : 'Save'}
@@ -154,7 +154,7 @@ export function TaskDetailPage() {
               href={selectedTask.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 text-[#6366f1] hover:underline"
+              className="flex items-center gap-1 text-accent hover:underline"
             >
               <ExternalLink size={11} /> source
             </a>

@@ -35,7 +35,7 @@ export function GitHubRenderer({ content, metadata, summary: _summary }: Props) 
           </div>
           {subjectUrl && (
             <a href={subjectUrl} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1 text-[12px] text-[#6366f1] hover:text-[#818cf8] transition-colors">
+              className="flex items-center gap-1 text-[12px] text-accent hover:text-link transition-colors">
               <ExternalLink size={11} /> View on GitHub
             </a>
           )}

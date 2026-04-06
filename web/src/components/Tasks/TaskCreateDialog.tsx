@@ -31,7 +31,7 @@ export function TaskCreateDialog({ onClose, onCreate }: {
               value={title}
               onChange={e => setTitle(e.target.value)}
               autoFocus
-              className="w-full px-3 py-2 bg-surface-raised border border-border-subtle rounded-lg text-[14px] text-text outline-none focus:border-[#6366f1]/50"
+              className="w-full px-3 py-2 bg-surface-raised border border-border-subtle rounded-lg text-[14px] text-text outline-none focus:border-accent/50"
             />
           </div>
           <div>
@@ -40,7 +40,7 @@ export function TaskCreateDialog({ onClose, onCreate }: {
               value={content}
               onChange={e => setContent(e.target.value)}
               rows={4}
-              className="w-full px-3 py-2 bg-surface-raised border border-border-subtle rounded-lg text-[14px] text-text outline-none focus:border-[#6366f1]/50 resize-none"
+              className="w-full px-3 py-2 bg-surface-raised border border-border-subtle rounded-lg text-[14px] text-text outline-none focus:border-accent/50 resize-none"
             />
           </div>
           <div>
@@ -49,7 +49,7 @@ export function TaskCreateDialog({ onClose, onCreate }: {
               type="date"
               value={deadline}
               onChange={e => setDeadline(e.target.value)}
-              className="px-3 py-2 bg-surface-raised border border-border-subtle rounded-lg text-[14px] text-text outline-none focus:border-[#6366f1]/50"
+              className="px-3 py-2 bg-surface-raised border border-border-subtle rounded-lg text-[14px] text-text outline-none focus:border-accent/50"
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
@@ -58,7 +58,7 @@ export function TaskCreateDialog({ onClose, onCreate }: {
               Cancel
             </button>
             <button type="submit"
-              className="px-4 py-2 text-[13px] bg-[#6366f1] hover:bg-[#818cf8] text-white rounded-lg cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 text-[13px] bg-accent hover:bg-accent-hover text-white rounded-lg cursor-pointer disabled:opacity-50"
               disabled={!title.trim()}>
               Create
             </button>

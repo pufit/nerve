@@ -6,7 +6,7 @@ import {
 import { useMemoryStore, type Category, type MemoryItem, type Resource, type TabView } from '../stores/memoryStore';
 
 const TYPE_COLORS: Record<string, string> = {
-  profile: '#6366f1',
+  profile: 'var(--theme-accent)',
   event: '#f59e0b',
   knowledge: '#22c55e',
   behavior: '#ef4444',
@@ -74,18 +74,18 @@ function EditForm({ item, onSave, onCancel }: {
   };
 
   return (
-    <div className="border border-[#6366f1]/30 rounded-lg p-3 bg-[#6366f1]/5 space-y-2">
+    <div className="border border-accent/30 rounded-lg p-3 bg-accent/5 space-y-2">
       <textarea
         value={content}
         onChange={e => setContent(e.target.value)}
         rows={3}
-        className="w-full bg-surface-raised border border-border-subtle rounded px-3 py-2 text-[13px] text-[#ddd] outline-none focus:border-[#6366f1]/50 resize-none"
+        className="w-full bg-surface-raised border border-border-subtle rounded px-3 py-2 text-[13px] text-text-secondary outline-none focus:border-accent/50 resize-none"
       />
       <div className="flex items-center gap-2">
         <select
           value={memType}
           onChange={e => setMemType(e.target.value)}
-          className="bg-surface-raised border border-border-subtle rounded px-2 py-1 text-[12px] text-[#ddd] outline-none focus:border-[#6366f1]/50"
+          className="bg-surface-raised border border-border-subtle rounded px-2 py-1 text-[12px] text-text-secondary outline-none focus:border-accent/50"
         >
           {Object.keys(TYPE_COLORS).map(t => (
             <option key={t} value={t}>{t}</option>
@@ -93,7 +93,7 @@ function EditForm({ item, onSave, onCancel }: {
         </select>
         <div className="flex-1" />
         <button onClick={onCancel} className="px-3 py-1 text-xs text-text-muted hover:text-text-secondary cursor-pointer transition-colors">Cancel</button>
-        <button onClick={handleSave} disabled={saving || !content.trim()} className="px-3 py-1 bg-[#6366f1] text-white text-xs rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#5558e6] transition-colors">
+        <button onClick={handleSave} disabled={saving || !content.trim()} className="px-3 py-1 bg-accent text-white text-xs rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent-hover transition-colors">
           {saving ? 'Saving...' : 'Save'}
         </button>
       </div>
@@ -103,7 +103,7 @@ function EditForm({ item, onSave, onCancel }: {
           {categories.map(cat => {
             const selected = selectedCatIds.has(cat.id);
             return (
-              <button key={cat.id} onClick={() => toggleCat(cat.id)} className={`text-[10px] px-1.5 py-0.5 rounded cursor-pointer transition-colors ${selected ? 'bg-[#6366f1]/25 text-[#6366f1] border border-[#6366f1]/40' : 'bg-surface-raised text-text-dim border border-border-subtle hover:text-text-muted hover:border-border'}`}>
+              <button key={cat.id} onClick={() => toggleCat(cat.id)} className={`text-[10px] px-1.5 py-0.5 rounded cursor-pointer transition-colors ${selected ? 'bg-accent/25 text-accent border border-accent/40' : 'bg-surface-raised text-text-dim border border-border-subtle hover:text-text-muted hover:border-border'}`}>
                 {cat.name.replace(/_/g, ' ')}
               </button>
             );
@@ -187,10 +187,10 @@ function CategorySummaryEditor({ category }: { category: Category }) {
 
   return (
     <div className="px-3 py-2 bg-bg-sunken border-b border-border-subtle">
-      <textarea value={value} onChange={e => setValue(e.target.value)} rows={3} autoFocus className="w-full bg-surface-raised border border-border-subtle rounded px-2 py-1.5 text-[11px] text-[#ddd] outline-none focus:border-[#6366f1]/50 resize-none" />
+      <textarea value={value} onChange={e => setValue(e.target.value)} rows={3} autoFocus className="w-full bg-surface-raised border border-border-subtle rounded px-2 py-1.5 text-[11px] text-text-secondary outline-none focus:border-accent/50 resize-none" />
       <div className="flex justify-end gap-2 mt-1">
         <button onClick={() => setEditingCategoryId(null)} className="px-2 py-0.5 text-[10px] text-text-muted hover:text-text-secondary cursor-pointer">Cancel</button>
-        <button onClick={handleSave} disabled={saving} className="px-2 py-0.5 bg-[#6366f1] text-white text-[10px] rounded cursor-pointer disabled:opacity-40 hover:bg-[#5558e6] transition-colors">
+        <button onClick={handleSave} disabled={saving} className="px-2 py-0.5 bg-accent text-white text-[10px] rounded cursor-pointer disabled:opacity-40 hover:bg-accent-hover transition-colors">
           {saving ? 'Saving...' : 'Save'}
         </button>
       </div>
@@ -214,14 +214,14 @@ function CreateCategoryForm({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="border border-[#6366f1]/30 rounded-lg p-3 bg-[#6366f1]/5 mx-3 mb-3">
+    <div className="border border-accent/30 rounded-lg p-3 bg-accent/5 mx-3 mb-3">
       <div className="flex items-center justify-between mb-2">
         <span className="text-[12px] font-medium">New Category</span>
         <button onClick={onClose} className="text-text-faint hover:text-text-muted cursor-pointer"><X size={12} /></button>
       </div>
-      <input type="text" placeholder="Name (e.g. travel_plans)" value={name} onChange={e => setName(e.target.value)} className="w-full bg-surface-raised border border-border-subtle rounded px-2 py-1 text-[12px] text-[#ddd] mb-2 outline-none focus:border-[#6366f1]/50" />
-      <input type="text" placeholder="Description" value={desc} onChange={e => setDesc(e.target.value)} className="w-full bg-surface-raised border border-border-subtle rounded px-2 py-1 text-[12px] text-[#ddd] mb-2 outline-none focus:border-[#6366f1]/50" />
-      <button onClick={handleCreate} disabled={!name.trim() || creating} className="px-3 py-1 bg-[#6366f1] text-white text-[11px] rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#5558e6] transition-colors">
+      <input type="text" placeholder="Name (e.g. travel_plans)" value={name} onChange={e => setName(e.target.value)} className="w-full bg-surface-raised border border-border-subtle rounded px-2 py-1 text-[12px] text-text-secondary mb-2 outline-none focus:border-accent/50" />
+      <input type="text" placeholder="Description" value={desc} onChange={e => setDesc(e.target.value)} className="w-full bg-surface-raised border border-border-subtle rounded px-2 py-1 text-[12px] text-text-secondary mb-2 outline-none focus:border-accent/50" />
+      <button onClick={handleCreate} disabled={!name.trim() || creating} className="px-3 py-1 bg-accent text-white text-[11px] rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent-hover transition-colors">
         {creating ? 'Creating...' : 'Create'}
       </button>
     </div>
@@ -264,8 +264,8 @@ function Heatmap({ items, onDayClick, selectedDate }: { items: MemoryItem[]; onD
   }, [dayCounts]);
 
   const getColor = (count: number, dateStr: string) => {
-    if (selectedDate === dateStr) return '#6366f1';
-    if (count === 0) return '#161616';
+    if (selectedDate === dateStr) return 'var(--theme-accent)';
+    if (count === 0) return 'var(--theme-surface)';
     if (count <= 2) return '#f59e0b33';
     if (count <= 5) return '#f59e0b88';
     return '#f59e0b';
@@ -456,9 +456,9 @@ function TimelineView() {
     <div className="flex flex-col h-full">
       <Heatmap items={allEvents} onDayClick={handleDayClick} selectedDate={filterDate} />
       {filterDate && (
-        <div className="px-3 py-1.5 bg-[#f59e0b]/10 border-b border-border-subtle flex items-center gap-2">
-          <span className="text-[11px] text-[#f59e0b]">Showing: {filterDate}</span>
-          <button onClick={() => setFilterDate(null)} className="text-[#f59e0b] hover:text-[#fbbf24] cursor-pointer"><X size={12} /></button>
+        <div className="px-3 py-1.5 bg-warning/10 border-b border-border-subtle flex items-center gap-2">
+          <span className="text-[11px] text-warning">Showing: {filterDate}</span>
+          <button onClick={() => setFilterDate(null)} className="text-warning hover:text-warning cursor-pointer"><X size={12} /></button>
         </div>
       )}
       <div className="flex-1 overflow-y-auto p-3">
@@ -468,8 +468,8 @@ function TimelineView() {
         {grouped.map(group => (
           <div key={group.dateKey} id={`timeline-date-${group.dateKey}`} className="mb-4">
             <div className="flex items-center gap-2 mb-2 px-2">
-              <Clock size={12} className="text-[#f59e0b]" />
-              <span className="text-[12px] text-[#f59e0b] font-medium">{formatDateGroup(group.date)}</span>
+              <Clock size={12} className="text-warning" />
+              <span className="text-[12px] text-warning font-medium">{formatDateGroup(group.date)}</span>
             </div>
             <div className="border-l-2 border-border-subtle ml-3 pl-4 space-y-1">
               {group.items.map(item => {
@@ -478,7 +478,7 @@ function TimelineView() {
                 const catIds = itemCategoryMap[item.id] || [];
                 return (
                   <div key={item.id} className="group flex items-start gap-2 px-2 py-1.5 rounded hover:bg-surface-raised transition-colors">
-                    <div className="w-2 h-2 rounded-full bg-[#f59e0b] mt-1.5 shrink-0" />
+                    <div className="w-2 h-2 rounded-full bg-warning mt-1.5 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="text-[12px] text-text-secondary">{item.summary}</div>
                       {catIds.length > 0 && (
@@ -533,8 +533,8 @@ function SourcesView() {
       {grouped.map(group => (
         <div key={group.date}>
           <div className="flex items-center gap-2 mb-2 px-1">
-            <Clock size={12} className="text-[#3b82f6]" />
-            <span className="text-[12px] text-[#3b82f6] font-medium">{formatDateGroup(group.date)}</span>
+            <Clock size={12} className="text-info" />
+            <span className="text-[12px] text-info font-medium">{formatDateGroup(group.date)}</span>
             <span className="text-[10px] text-text-faint">{group.resources.length} sources</span>
           </div>
           <div className="space-y-2 ml-3">
@@ -578,7 +578,7 @@ function SourcesView() {
 
 const ACTION_COLORS: Record<string, string> = {
   item_created: '#22c55e',
-  item_updated: '#6366f1',
+  item_updated: 'var(--theme-accent)',
   item_deleted: '#ef4444',
   category_created: '#a855f7',
   category_updated: '#a855f7',
@@ -595,11 +595,11 @@ function LogView() {
   return (
     <div className="p-3 space-y-1">
       <div className="flex gap-2 mb-3">
-        <select value={auditFilter.action} onChange={e => setAuditFilter({ action: e.target.value })} className="bg-surface-raised border border-border-subtle rounded px-2 py-1 text-[12px] text-[#ddd] outline-none">
+        <select value={auditFilter.action} onChange={e => setAuditFilter({ action: e.target.value })} className="bg-surface-raised border border-border-subtle rounded px-2 py-1 text-[12px] text-text-secondary outline-none">
           <option value="">All actions</option>
           {Object.keys(ACTION_COLORS).map(a => <option key={a} value={a}>{a.replace(/_/g, ' ')}</option>)}
         </select>
-        <select value={auditFilter.target_type} onChange={e => setAuditFilter({ target_type: e.target.value })} className="bg-surface-raised border border-border-subtle rounded px-2 py-1 text-[12px] text-[#ddd] outline-none">
+        <select value={auditFilter.target_type} onChange={e => setAuditFilter({ target_type: e.target.value })} className="bg-surface-raised border border-border-subtle rounded px-2 py-1 text-[12px] text-text-secondary outline-none">
           <option value="">All types</option>
           <option value="item">item</option>
           <option value="category">category</option>
@@ -662,7 +662,7 @@ function Sidebar() {
       <div className="flex-1 overflow-y-auto p-3">
         <div className="text-[11px] text-text-dim uppercase tracking-wider mb-2">Categories</div>
         {selectedCategory && (
-          <button onClick={() => setSelectedCategory(null)} className="w-full text-left px-2 py-1 mb-1 text-[11px] text-[#6366f1] hover:bg-surface-raised rounded cursor-pointer transition-colors flex items-center gap-1">
+          <button onClick={() => setSelectedCategory(null)} className="w-full text-left px-2 py-1 mb-1 text-[11px] text-accent hover:bg-surface-raised rounded cursor-pointer transition-colors flex items-center gap-1">
             <X size={10} /> Clear filter
           </button>
         )}
@@ -670,7 +670,7 @@ function Sidebar() {
           {categories.map(cat => {
             const isActive = selectedCategory === cat.id;
             return (
-              <button key={cat.id} onClick={() => setSelectedCategory(isActive ? null : cat.id)} className={`w-full text-left px-2 py-1.5 rounded text-[12px] cursor-pointer transition-colors flex items-center gap-2 ${isActive ? 'bg-[#6366f1]/15 text-[#6366f1]' : 'text-text-muted hover:bg-surface-raised hover:text-text-secondary'}`}>
+              <button key={cat.id} onClick={() => setSelectedCategory(isActive ? null : cat.id)} className={`w-full text-left px-2 py-1.5 rounded text-[12px] cursor-pointer transition-colors flex items-center gap-2 ${isActive ? 'bg-accent/15 text-accent' : 'text-text-muted hover:bg-surface-raised hover:text-text-secondary'}`}>
                 <span className="flex-1 truncate">{cat.name.replace(/_/g, ' ')}</span>
                 <span className="text-[10px] text-text-dim">{catCounts[cat.id] || 0}</span>
               </button>
@@ -724,7 +724,7 @@ export function MemuPage() {
         </div>
         <div className="flex gap-1 items-center">
           {TABS.map(tab => (
-            <button key={tab.key} onClick={() => setActiveTab(tab.key)} className={`px-3 py-1 rounded text-xs cursor-pointer transition-colors ${activeTab === tab.key ? 'bg-[#6366f1]/20 text-[#6366f1]' : 'text-text-dim hover:text-text-muted'}`}>
+            <button key={tab.key} onClick={() => setActiveTab(tab.key)} className={`px-3 py-1 rounded text-xs cursor-pointer transition-colors ${activeTab === tab.key ? 'bg-accent/20 text-accent' : 'text-text-dim hover:text-text-muted'}`}>
               {tab.key === 'log' && <History size={11} className="inline mr-1 -mt-0.5" />}{tab.label}
             </button>
           ))}
@@ -738,7 +738,7 @@ export function MemuPage() {
             <div className="px-3 py-2 border-b border-border-subtle shrink-0">
               <div className="relative">
                 <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-faint" />
-                <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder={`Search ${activeTab === 'facts' ? 'facts' : 'events'}...`} className="w-full bg-surface-raised border border-border-subtle rounded pl-8 pr-3 py-1.5 text-[12px] text-[#ddd] outline-none focus:border-border-subtle placeholder:text-text-faint" />
+                <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder={`Search ${activeTab === 'facts' ? 'facts' : 'events'}...`} className="w-full bg-surface-raised border border-border-subtle rounded pl-8 pr-3 py-1.5 text-[12px] text-text-secondary outline-none focus:border-border-subtle placeholder:text-text-faint" />
                 {searchQuery && (
                   <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-faint hover:text-text-muted cursor-pointer"><X size={12} /></button>
                 )}

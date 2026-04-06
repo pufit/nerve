@@ -9,7 +9,7 @@ interface ThemeState {
 }
 
 const STORAGE_KEY = 'nerve-theme';
-const CYCLE_ORDER: ThemePreference[] = ['system', 'light', 'dark'];
+const CYCLE_ORDER: ThemePreference[] = ['dark', 'light', 'system'];
 
 function applyTheme(pref: ThemePreference) {
   const el = document.documentElement;
@@ -23,7 +23,7 @@ function applyTheme(pref: ThemePreference) {
 function getInitialPreference(): ThemePreference {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
-  return 'system';
+  return 'dark';
 }
 
 export const useThemeStore = create<ThemeState>((set, get) => {

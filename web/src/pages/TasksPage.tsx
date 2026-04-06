@@ -46,7 +46,7 @@ export function TasksPage() {
               onChange={e => handleSearchChange(e.target.value)}
               placeholder="Search..."
               className="pl-8 pr-7 py-1.5 w-48 text-[13px] bg-surface-raised border border-border-subtle rounded-lg
-                text-text-secondary placeholder-[#555] focus:outline-none focus:border-[#6366f1]/50
+                text-text-secondary placeholder:text-placeholder focus:outline-none focus:border-accent/50
                 transition-colors"
             />
             {localQuery && (
@@ -61,7 +61,7 @@ export function TasksPage() {
         </div>
         <button
           onClick={() => setShowCreateDialog(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] bg-[#6366f1] hover:bg-[#818cf8] text-white rounded-lg cursor-pointer"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] bg-accent hover:bg-accent-hover text-white rounded-lg cursor-pointer"
         >
           <Plus size={14} /> New Task
         </button>

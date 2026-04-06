@@ -65,7 +65,7 @@ function TodoRow({ todo }: { todo: TodoItem }) {
       {isCompleted ? (
         <CheckCircle2 size={14} className="text-green-500 shrink-0 todo-icon-enter" />
       ) : isActive ? (
-        <Loader2 size={14} className="text-[#6366f1] shrink-0 animate-spin" />
+        <Loader2 size={14} className="text-accent shrink-0 animate-spin" />
       ) : (
         <Circle size={14} className="text-text-faint shrink-0" />
       )}

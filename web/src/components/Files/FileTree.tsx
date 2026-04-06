@@ -23,8 +23,8 @@ function FileTreeNode({ node, depth, selectedPath, onSelect }: {
             : <ChevronRight size={12} className="shrink-0 text-text-faint" />
           }
           {expanded
-            ? <FolderOpen size={14} className="shrink-0 text-[#6366f1]" />
-            : <Folder size={14} className="shrink-0 text-[#6366f1]" />
+            ? <FolderOpen size={14} className="shrink-0 text-accent" />
+            : <Folder size={14} className="shrink-0 text-accent" />
           }
           <span className="truncate">{node.name}</span>
         </button>
@@ -46,7 +46,7 @@ function FileTreeNode({ node, depth, selectedPath, onSelect }: {
     <button
       onClick={() => onSelect(node.path)}
       className={`flex items-center gap-1.5 w-full text-left px-2 py-1 text-[13px] cursor-pointer rounded
-        ${isSelected ? 'bg-[#6366f1]/10 text-text' : 'text-text-muted hover:bg-surface-raised hover:text-text-secondary'}`}
+        ${isSelected ? 'bg-accent/10 text-text' : 'text-text-muted hover:bg-surface-raised hover:text-text-secondary'}`}
       style={{ paddingLeft: depth * 16 + 20 }}
     >
       <File size={13} className="shrink-0 text-text-dim" />

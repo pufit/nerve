@@ -5,7 +5,7 @@ import { useMcpStore } from '../stores/mcpStore';
 import { formatMcpName } from '../utils/formatMcpName';
 
 const TYPE_COLORS: Record<string, string> = {
-  sdk: 'text-[#6366f1] bg-[#6366f1]/10',
+  sdk: 'text-accent bg-accent/10',
   stdio: 'text-emerald-400 bg-emerald-400/10',
   sse: 'text-amber-400 bg-amber-400/10',
   http: 'text-sky-400 bg-sky-400/10',

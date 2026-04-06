@@ -15,7 +15,7 @@ export function BashToolBlock({ block }: { block: ToolCallBlockData }) {
         className="flex items-center gap-2 w-full px-3 py-2 text-left cursor-pointer hover:bg-surface-hover transition-colors"
       >
         {isRunning
-          ? <Loader2 size={14} className="text-[#6366f1] animate-spin shrink-0" />
+          ? <Loader2 size={14} className="text-accent animate-spin shrink-0" />
           : <Terminal size={14} className={`shrink-0 ${block.isError ? 'text-red-400' : 'text-emerald-400'}`} />
         }
         <span className="text-emerald-500 text-[13px] font-mono select-none">$</span>

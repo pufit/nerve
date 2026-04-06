@@ -43,7 +43,7 @@ export function ToolCallGroupBlock({ group }: { group: ToolCallGroup }) {
                      rounded-md transition-colors"
         >
           {hasRunning
-            ? <Loader2 size={12} className="text-[#6366f1] animate-spin shrink-0" />
+            ? <Loader2 size={12} className="text-accent animate-spin shrink-0" />
             : <Icon size={12} className={`shrink-0 ${hasError ? 'text-red-400' : 'text-text-faint'}`} />
           }
           <span className="font-mono font-medium">

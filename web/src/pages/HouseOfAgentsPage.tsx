@@ -101,7 +101,7 @@ export function HouseOfAgentsPage() {
                 value={newPipelineId}
                 onChange={e => setNewPipelineId(e.target.value)}
                 placeholder="pipeline-name"
-                className="w-full px-2 py-1 text-[12px] bg-surface-raised border border-border-subtle rounded text-text-secondary placeholder-[#555] focus:outline-none focus:border-amber-400/50"
+                className="w-full px-2 py-1 text-[12px] bg-surface-raised border border-border-subtle rounded text-text-secondary placeholder:text-placeholder focus:outline-none focus:border-amber-400/50"
                 onKeyDown={e => e.key === 'Enter' && handleCreate()}
                 autoFocus
               />

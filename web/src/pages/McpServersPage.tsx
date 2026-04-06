@@ -5,7 +5,7 @@ import { useMcpStore, type McpServer } from '../stores/mcpStore';
 import { formatMcpName } from '../utils/formatMcpName';
 
 const TYPE_COLORS: Record<string, string> = {
-  sdk: 'text-[#6366f1] bg-[#6366f1]/10',
+  sdk: 'text-accent bg-accent/10',
   stdio: 'text-emerald-400 bg-emerald-400/10',
   sse: 'text-amber-400 bg-amber-400/10',
   http: 'text-sky-400 bg-sky-400/10',
@@ -21,7 +21,7 @@ function ServerCard({ server }: { server: McpServer }) {
 
   return (
     <div
-      className="bg-surface-raised border border-border rounded-lg p-4 hover:border-[#3a3a3a] cursor-pointer transition-colors"
+      className="bg-surface-raised border border-border rounded-lg p-4 hover:border-border cursor-pointer transition-colors"
       onClick={() => navigate(`/mcp/${encodeURIComponent(server.name)}`)}
     >
       <div className="flex items-start justify-between mb-2">
@@ -106,9 +106,9 @@ export function McpServersPage() {
             <p className="text-sm text-text-dim mb-1">No MCP servers registered</p>
             <p className="text-xs text-text-faint">
               Add external MCP servers in{' '}
-              <code className="text-[#6366f1]">config.yaml</code>
+              <code className="text-accent">config.yaml</code>
               {' '}under the{' '}
-              <code className="text-[#6366f1]">mcp_servers</code> key.
+              <code className="text-accent">mcp_servers</code> key.
             </p>
           </div>
         ) : (

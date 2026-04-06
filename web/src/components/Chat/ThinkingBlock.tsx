@@ -11,17 +11,17 @@ export function ThinkingBlock({ content, streaming }: { content: string; streami
         onClick={() => setExpanded(!expanded)}
         className="flex items-center gap-2 w-full px-3 py-2 text-left cursor-pointer hover:bg-surface-hover rounded-r-md transition-colors"
       >
-        <Brain size={14} className="text-[#6366f1] shrink-0" />
+        <Brain size={14} className="text-accent shrink-0" />
         {expanded ? <ChevronDown size={14} className="text-text-faint" /> : <ChevronRight size={14} className="text-text-faint" />}
         <span className="text-[13px] text-text-muted italic truncate">
           {expanded ? 'Thinking' : preview || 'Thinking...'}
         </span>
-        {streaming && <span className="streaming-cursor inline-block w-1.5 h-3.5 bg-[#6366f1] ml-1 shrink-0" />}
+        {streaming && <span className="streaming-cursor inline-block w-1.5 h-3.5 bg-accent ml-1 shrink-0" />}
       </button>
       {expanded && (
         <div className="px-4 pb-3 text-[13px] text-text-muted italic whitespace-pre-wrap leading-relaxed">
           {content}
-          {streaming && <span className="streaming-cursor inline-block w-1.5 h-3.5 bg-[#6366f1] ml-0.5 align-text-bottom" />}
+          {streaming && <span className="streaming-cursor inline-block w-1.5 h-3.5 bg-accent ml-0.5 align-text-bottom" />}
         </div>
       )}
     </div>

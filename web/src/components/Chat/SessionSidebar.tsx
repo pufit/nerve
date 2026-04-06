@@ -293,7 +293,7 @@ export function SessionSidebar({ sessions, activeSession, agentStatus, onSelect,
                     onClick={() => onSelect(s.id)}
                     className={`group flex items-center gap-2 px-3 py-1.5 mx-1 rounded-md cursor-pointer text-[12px] transition-colors
                       ${s.id === activeSession
-                        ? 'bg-[#6366f1]/10 text-text-muted'
+                        ? 'bg-accent/10 text-text-muted'
                         : 'text-text-faint hover:bg-surface-raised hover:text-text-muted'
                       }`}
                   >
@@ -326,7 +326,7 @@ function StatusIndicator({ session, isActive, isRunning }: {
 }) {
   // Active + running: spinner
   if (isActive && isRunning) {
-    return <Loader2 size={12} className="shrink-0 text-[#6366f1] animate-spin" />;
+    return <Loader2 size={12} className="shrink-0 text-accent animate-spin" />;
   }
 
   // Non-active but running: pulsing green dot
@@ -419,7 +419,7 @@ function SessionItem({ session, isActive, isRunning, onSelect, onDelete, onRenam
       onClick={() => onSelect(session.id)}
       className={`group flex items-center gap-2 px-3 py-1.5 mx-1 rounded-md cursor-pointer text-sm transition-colors
         ${isActive
-          ? 'bg-[#6366f1]/10 text-text'
+          ? 'bg-accent/10 text-text'
           : 'text-text-muted hover:bg-surface-raised hover:text-text-secondary'
         }`}
     >

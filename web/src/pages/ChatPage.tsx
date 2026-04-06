@@ -114,7 +114,7 @@ export function ChatPage() {
               })()}
               {statusLabel && (
                 <div className="flex items-center gap-1.5 text-[12px] text-text-muted">
-                  <Loader2 size={12} className="animate-spin text-[#6366f1]" />
+                  <Loader2 size={12} className="animate-spin text-accent" />
                   <span>{statusLabel}</span>
                 </div>
               )}

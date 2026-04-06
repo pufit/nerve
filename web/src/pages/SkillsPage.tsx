@@ -12,7 +12,7 @@ function SkillCard({ skill }: { skill: Skill }) {
 
   return (
     <div
-      className="bg-surface-raised border border-border rounded-lg p-4 hover:border-[#3a3a3a] cursor-pointer transition-colors"
+      className="bg-surface-raised border border-border rounded-lg p-4 hover:border-border cursor-pointer transition-colors"
       onClick={() => navigate(`/skills/${encodeURIComponent(skill.id)}`)}
     >
       <div className="flex items-start justify-between mb-2">
@@ -87,7 +87,7 @@ function CreateSkillDialog() {
             <label className="text-xs text-text-muted block mb-1">Name</label>
             <input
               value={name} onChange={e => setName(e.target.value)}
-              className="w-full bg-bg border border-border rounded px-3 py-1.5 text-sm text-text outline-none focus:border-[#6366f1]"
+              className="w-full bg-bg border border-border rounded px-3 py-1.5 text-sm text-text outline-none focus:border-accent"
               placeholder="e.g. code-review"
               autoFocus
             />
@@ -96,7 +96,7 @@ function CreateSkillDialog() {
             <label className="text-xs text-text-muted block mb-1">Description</label>
             <textarea
               value={description} onChange={e => setDescription(e.target.value)}
-              className="w-full bg-bg border border-border rounded px-3 py-1.5 text-sm text-text outline-none focus:border-[#6366f1] min-h-[60px] resize-y"
+              className="w-full bg-bg border border-border rounded px-3 py-1.5 text-sm text-text outline-none focus:border-accent min-h-[60px] resize-y"
               placeholder='This skill should be used when the user asks to "review code"...'
             />
           </div>
@@ -104,7 +104,7 @@ function CreateSkillDialog() {
             <label className="text-xs text-text-muted block mb-1">Instructions (optional)</label>
             <textarea
               value={content} onChange={e => setContent(e.target.value)}
-              className="w-full bg-bg border border-border rounded px-3 py-1.5 text-sm text-text outline-none focus:border-[#6366f1] min-h-[120px] resize-y font-mono text-xs"
+              className="w-full bg-bg border border-border rounded px-3 py-1.5 text-sm text-text outline-none focus:border-accent min-h-[120px] resize-y font-mono text-xs"
               placeholder="Markdown instructions for the agent..."
             />
           </div>
@@ -116,7 +116,7 @@ function CreateSkillDialog() {
           <button
             onClick={handleCreate}
             disabled={!name.trim() || !description.trim() || actionLoading}
-            className="px-3 py-1.5 text-xs bg-[#6366f1] text-white rounded hover:bg-[#5558e6] disabled:opacity-50 cursor-pointer disabled:cursor-default"
+            className="px-3 py-1.5 text-xs bg-accent text-white rounded hover:bg-accent-hover disabled:opacity-50 cursor-pointer disabled:cursor-default"
           >
             {actionLoading ? 'Creating...' : 'Create Skill'}
           </button>
@@ -153,7 +153,7 @@ export function SkillsPage() {
           </button>
           <button
             onClick={() => setShowCreateDialog(true)}
-            className="flex items-center gap-1 px-2 py-1 text-xs bg-[#6366f1] text-white rounded hover:bg-[#5558e6] cursor-pointer"
+            className="flex items-center gap-1 px-2 py-1 text-xs bg-accent text-white rounded hover:bg-accent-hover cursor-pointer"
           >
             <Plus size={12} />
             New Skill
@@ -172,7 +172,7 @@ export function SkillsPage() {
             <p className="text-xs text-text-faint">
               Create skills to extend the agent with specialized workflows.
               <br />
-              Skills are stored as SKILL.md files in <code className="text-[#6366f1]">workspace/skills/</code>
+              Skills are stored as SKILL.md files in <code className="text-accent">workspace/skills/</code>
             </p>
           </div>
         ) : (

@@ -65,7 +65,7 @@ export function PlansPage() {
   return (
     <div className="h-full flex flex-col">
       <div className="border-b border-border-subtle px-6 py-3 flex items-center gap-4 bg-bg shrink-0">
-        <Lightbulb size={18} className="text-[#6366f1]" />
+        <Lightbulb size={18} className="text-accent" />
         <h1 className="text-lg font-semibold">Plans</h1>
         <div className="flex items-center gap-1 ml-2">
           {FILTERS.map(f => (
@@ -74,7 +74,7 @@ export function PlansPage() {
               onClick={() => setFilter(f.value)}
               className={`px-3 py-1 text-[12px] rounded-full border cursor-pointer transition-colors
                 ${filter === f.value
-                  ? 'bg-[#6366f1]/15 text-[#6366f1] border-[#6366f1]/30'
+                  ? 'bg-accent/15 text-accent border-accent/30'
                   : 'text-text-dim border-border hover:border-border hover:text-text-muted'
                 }`}
             >

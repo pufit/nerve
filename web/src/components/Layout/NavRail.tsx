@@ -43,7 +43,7 @@ export function NavRail() {
 
   return (
     <div className="w-14 bg-surface border-r border-border flex flex-col items-center py-3 shrink-0">
-      <div className="text-[#6366f1] font-bold text-xs mb-4 tracking-wider">N</div>
+      <div className="text-accent font-bold text-xs mb-4 tracking-wider">N</div>
 
       <div className="flex-1 flex flex-col gap-1">
         {visibleItems.map(({ path, icon: Icon, label }) => {
@@ -55,7 +55,7 @@ export function NavRail() {
               onClick={() => navigate(path)}
               className={`relative w-10 h-10 rounded-lg flex flex-col items-center justify-center gap-0.5 cursor-pointer transition-colors
                 ${active
-                  ? 'bg-[#6366f1]/15 text-[#6366f1]'
+                  ? 'bg-accent/15 text-accent'
                   : 'text-text-dim hover:text-text-muted hover:bg-surface-hover'
                 }`}
               title={label}

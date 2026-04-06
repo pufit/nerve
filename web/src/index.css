@@ -16,10 +16,12 @@
   --color-text-faint: var(--theme-text-faint);
   --color-border: var(--theme-border);
   --color-border-subtle: var(--theme-border-subtle);
+  --color-link: var(--theme-link);
 }
 
 /* ── Dark palette (default) ── */
 :root {
+  color-scheme: dark;
   --theme-bg: #0f0f0f;
   --theme-bg-sunken: #0c0c0c;
   --theme-surface: #141414;
@@ -33,10 +35,12 @@
   --theme-text-faint: #444444;
   --theme-border: #2a2a2a;
   --theme-border-subtle: #222222;
+  --theme-link: #818cf8;
 }
 
 /* ── Light palette (explicit) ── */
 [data-theme="light"] {
+  color-scheme: light;
   --theme-bg: #f5f5f5;
   --theme-bg-sunken: #ebebeb;
   --theme-surface: #ffffff;
@@ -50,11 +54,13 @@
   --theme-text-faint: #bbbbbb;
   --theme-border: #d4d4d4;
   --theme-border-subtle: #e0e0e0;
+  --theme-link: #4f46e5;
 }
 
 /* ── System preference (when no explicit data-theme) ── */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
+    color-scheme: light;
     --theme-bg: #f5f5f5;
     --theme-bg-sunken: #ebebeb;
     --theme-surface: #ffffff;
@@ -68,6 +74,7 @@
     --theme-text-faint: #bbbbbb;
     --theme-border: #d4d4d4;
     --theme-border-subtle: #e0e0e0;
+    --theme-link: #4f46e5;
   }
 }
 
@@ -93,7 +100,7 @@ body {
 .markdown-content ul, .markdown-content ol { margin: 0.4em 0; padding-left: 1.5em; }
 .markdown-content li { margin: 0.2em 0; line-height: 1.5; }
 .markdown-content blockquote { border-left: 3px solid var(--theme-text-faint); padding-left: 1em; margin: 0.5em 0; color: var(--theme-text-muted); }
-.markdown-content a { color: #818cf8; text-decoration: none; }
+.markdown-content a { color: var(--theme-link); text-decoration: none; }
 .markdown-content a:hover { text-decoration: underline; }
 .markdown-content table { border-collapse: collapse; margin: 0.5em 0; width: 100%; }
 .markdown-content th, .markdown-content td { border: 1px solid var(--theme-border-subtle); padding: 0.4em 0.8em; text-align: left; }
@@ -135,8 +142,7 @@ body {
 }
 
 /* ── Highlight.js light mode overrides ── */
-[data-theme="light"] .hljs,
-:root:not([data-theme="dark"]) .hljs {
+[data-theme="light"] .hljs {
   color: #24292e;
   background: var(--theme-code-bg);
 }

@@ -18,9 +18,9 @@ function toolIcon(tool: string) {
 }
 
 const STATUS_COLORS = {
-  running: 'text-emerald-400',
+  running: 'text-hue-emerald',
   done: 'text-text-faint',
-  timeout: 'text-amber-400',
+  timeout: 'text-hue-amber',
 } as const;
 
 export function BackgroundJobs({ sessions, activeSession, onSelect }: {
@@ -56,7 +56,7 @@ export function BackgroundJobs({ sessions, activeSession, onSelect }: {
       {/* Badge */}
       <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-[12px] cursor-default ${
         runningTasks.length > 0
-          ? 'text-emerald-400 bg-emerald-400/10'
+          ? 'text-hue-emerald bg-emerald-400/10'
           : 'text-text-faint bg-surface-raised'
       }`}>
         {runningTasks.length > 0 ? (
@@ -98,11 +98,11 @@ export function BackgroundJobs({ sessions, activeSession, onSelect }: {
                     className="flex items-center gap-2 px-3 py-1.5 text-[12px]"
                   >
                     {task.status === 'running' ? (
-                      <Loader2 size={12} className="shrink-0 text-emerald-400 animate-spin" />
+                      <Loader2 size={12} className="shrink-0 text-hue-emerald animate-spin" />
                     ) : task.status === 'done' ? (
-                      <Check size={12} className="shrink-0 text-emerald-500" />
+                      <Check size={12} className="shrink-0 text-hue-emerald" />
                     ) : (
-                      <AlertTriangle size={12} className="shrink-0 text-amber-400" />
+                      <AlertTriangle size={12} className="shrink-0 text-hue-amber" />
                     )}
                     <span className={`flex-1 min-w-0 truncate ${statusColor}`}>
                       {task.label}
@@ -130,7 +130,7 @@ export function BackgroundJobs({ sessions, activeSession, onSelect }: {
                   onClick={() => { setHovering(false); onSelect(s.id); }}
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-[12px] text-text-muted hover:bg-border-subtle hover:text-text transition-colors cursor-pointer"
                 >
-                  <Loader2 size={12} className="shrink-0 text-emerald-400 animate-spin" />
+                  <Loader2 size={12} className="shrink-0 text-hue-emerald animate-spin" />
                   <span className="flex-1 min-w-0 truncate">{s.title || s.id}</span>
                   <span className="shrink-0 text-[10px] text-text-faint">
                     {s.source || 'web'}

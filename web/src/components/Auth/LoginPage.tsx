@@ -25,7 +25,7 @@ export function LoginPage() {
           autoFocus
           className="w-full px-3 py-2 bg-surface-raised border border-border-subtle rounded text-text outline-none focus:border-accent mb-4"
         />
-        {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
+        {error && <p className="text-hue-red text-sm mb-3">{error}</p>}
         <button
           type="submit"
           disabled={loading}

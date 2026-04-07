@@ -20,7 +20,7 @@ export function GitHubRenderer({ content, metadata, summary: _summary }: Props) 
       {(repoName || subjectUrl) && (
         <div className="mb-4 p-3 bg-surface border border-border-subtle rounded-lg">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <Github size={14} className="text-purple-400 shrink-0" />
+            <Github size={14} className="text-hue-purple shrink-0" />
             <span className="text-[13px] text-text-secondary font-medium">{repoName}</span>
             {subjectType && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-600">

@@ -21,9 +21,9 @@ function extractText(result: string): string {
 function sourceIcon(source: string) {
   const type = source.split(':')[0];
   switch (type) {
-    case 'gmail': return <Mail size={12} className="text-red-400" />;
-    case 'github': return <Github size={12} className="text-purple-400" />;
-    case 'telegram': return <MessageCircle size={12} className="text-blue-400" />;
+    case 'gmail': return <Mail size={12} className="text-hue-red" />;
+    case 'github': return <Github size={12} className="text-hue-purple" />;
+    case 'telegram': return <MessageCircle size={12} className="text-hue-blue" />;
     default: return <Inbox size={12} className="text-text-dim" />;
   }
 }
@@ -154,13 +154,13 @@ export function SourceToolBlock({ block }: { block: ToolCallBlockData }) {
         className="flex items-center gap-2 w-full px-3 py-2 text-left cursor-pointer hover:bg-surface-raised transition-colors"
       >
         {isRunning
-          ? <Loader2 size={14} className="text-cyan-400 animate-spin shrink-0" />
-          : <Icon size={14} className={`shrink-0 ${block.isError ? 'text-red-400' : 'text-cyan-400'}`} />
+          ? <Loader2 size={14} className="text-hue-cyan animate-spin shrink-0" />
+          : <Icon size={14} className={`shrink-0 ${block.isError ? 'text-hue-red' : 'text-hue-cyan'}`} />
         }
         <span className="text-[13px] font-medium text-cyan-300">{label}</span>
         {summary && <span className="text-[12px] text-text-dim truncate">{summary}</span>}
         {(isPoll || isRead) && messageCount > 0 && !isRunning && (
-          <span className="text-[10px] text-cyan-400/60 shrink-0">{messageCount} msg</span>
+          <span className="text-[10px] text-hue-cyan/60 shrink-0">{messageCount} msg</span>
         )}
         <div className="ml-auto shrink-0">
           {expanded ? <ChevronDown size={14} className="text-text-faint" /> : <ChevronRight size={14} className="text-text-faint" />}
@@ -178,7 +178,7 @@ export function SourceToolBlock({ block }: { block: ToolCallBlockData }) {
                   <span className="text-text-secondary font-mono">{entry.name}</span>
                   {entry.messageCount && <span className="text-text-dim">{entry.messageCount} msgs</span>}
                   {entry.unread && parseInt(entry.unread) > 0 && (
-                    <span className="text-amber-400 font-medium">{entry.unread} unread</span>
+                    <span className="text-hue-amber font-medium">{entry.unread} unread</span>
                   )}
                   {entry.unread === '0' && (
                     <span className="text-text-faint">0 unread</span>
@@ -222,7 +222,7 @@ export function SourceToolBlock({ block }: { block: ToolCallBlockData }) {
 
           {/* Fallback: raw text for unparsed results */}
           {!isList && parsedMessages.length === 0 && !isNoMessages && resultText && (
-            <pre className={`px-3 py-2 text-[12px] whitespace-pre-wrap max-h-60 overflow-y-auto ${block.isError ? 'text-red-400' : 'text-text-muted'}`}>
+            <pre className={`px-3 py-2 text-[12px] whitespace-pre-wrap max-h-60 overflow-y-auto ${block.isError ? 'text-hue-red' : 'text-text-muted'}`}>
               {resultText}
             </pre>
           )}
@@ -236,7 +236,7 @@ export function SourceToolBlock({ block }: { block: ToolCallBlockData }) {
 
           {/* Error */}
           {block.isError && resultText && (
-            <pre className="px-3 py-2 text-[12px] text-red-400 whitespace-pre-wrap border-t border-cyan-500/10">
+            <pre className="px-3 py-2 text-[12px] text-hue-red whitespace-pre-wrap border-t border-cyan-500/10">
               {resultText}
             </pre>
           )}

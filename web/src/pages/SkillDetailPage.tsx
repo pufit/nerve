@@ -108,7 +108,7 @@ export function SkillDetailPage() {
           )}
           <button
             onClick={() => setShowDeleteConfirm(true)}
-            className="flex items-center gap-1 px-2 py-1 text-xs text-red-400 hover:bg-red-900/20 rounded cursor-pointer"
+            className="flex items-center gap-1 px-2 py-1 text-xs text-hue-red hover:bg-red-900/20 rounded cursor-pointer"
           >
             <Trash2 size={12} />
           </button>
@@ -122,7 +122,7 @@ export function SkillDetailPage() {
           <div className="px-4 py-2 border-b border-border flex items-center gap-2">
             <FileText size={12} className="text-text-dim" />
             <span className="text-xs text-text-muted">SKILL.md</span>
-            {hasChanges && <span className="text-[10px] text-amber-400">unsaved</span>}
+            {hasChanges && <span className="text-[10px] text-hue-amber">unsaved</span>}
           </div>
           <textarea
             value={editContent}
@@ -158,7 +158,7 @@ export function SkillDetailPage() {
                       <CheckCircle size={10} />
                       <span>Success Rate</span>
                     </div>
-                    <span className={`text-xs font-mono ${successRate >= 90 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    <span className={`text-xs font-mono ${successRate >= 90 ? 'text-hue-emerald' : 'text-hue-amber'}`}>
                       {successRate}%
                     </span>
                   </div>
@@ -189,13 +189,13 @@ export function SkillDetailPage() {
             <div className="space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-text-dim">User Invocable</span>
-                <span className={selectedSkill.user_invocable ? 'text-emerald-400' : 'text-text-dim'}>
+                <span className={selectedSkill.user_invocable ? 'text-hue-emerald' : 'text-text-dim'}>
                   {selectedSkill.user_invocable ? 'Yes' : 'No'}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-text-dim">Model Invocable</span>
-                <span className={selectedSkill.model_invocable ? 'text-emerald-400' : 'text-text-dim'}>
+                <span className={selectedSkill.model_invocable ? 'text-hue-emerald' : 'text-text-dim'}>
                   {selectedSkill.model_invocable ? 'Yes' : 'No'}
                 </span>
               </div>
@@ -233,9 +233,9 @@ export function SkillDetailPage() {
                   <div key={u.id} className="flex items-center justify-between text-[10px]">
                     <div className="flex items-center gap-1.5">
                       {u.success ? (
-                        <CheckCircle size={10} className="text-emerald-500" />
+                        <CheckCircle size={10} className="text-hue-emerald" />
                       ) : (
-                        <XCircle size={10} className="text-red-500" />
+                        <XCircle size={10} className="text-hue-red" />
                       )}
                       <span className="text-text-muted">{u.invoked_by}</span>
                     </div>

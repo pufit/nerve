@@ -12,8 +12,8 @@ const AGENT_ICONS: Record<string, typeof Bot> = {
 };
 
 const AGENT_COLORS: Record<string, string> = {
-  Explore: 'text-cyan-400',
-  Plan: 'text-amber-400',
+  Explore: 'text-hue-cyan',
+  Plan: 'text-hue-amber',
   'general-purpose': 'text-link',
 };
 
@@ -74,7 +74,7 @@ export function SubagentToolBlock({ block }: { block: ToolCallBlockData }) {
       <div className="flex items-center gap-2 px-3 py-2">
         {isRunning
           ? <Loader2 size={14} className="text-accent animate-spin shrink-0" />
-          : <Icon size={14} className={`shrink-0 ${block.isError ? 'text-red-400' : color}`} />
+          : <Icon size={14} className={`shrink-0 ${block.isError ? 'text-hue-red' : color}`} />
         }
         <span className={`text-[13px] font-medium ${color}`}>{subagentType}</span>
         {description && <span className="text-[12px] text-text-muted truncate flex-1">{description}</span>}
@@ -137,7 +137,7 @@ export function SubagentToolBlock({ block }: { block: ToolCallBlockData }) {
           )}
 
           {block.isError && resultText && (
-            <pre className="px-3 py-2 text-[12px] text-red-400 whitespace-pre-wrap">
+            <pre className="px-3 py-2 text-[12px] text-hue-red whitespace-pre-wrap">
               {resultText}
             </pre>
           )}

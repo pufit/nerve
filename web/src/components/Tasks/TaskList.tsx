@@ -11,9 +11,9 @@ interface Task {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: 'text-yellow-400',
-  in_progress: 'text-blue-400',
-  done: 'text-green-400',
+  pending: 'text-hue-yellow',
+  in_progress: 'text-hue-blue',
+  done: 'text-hue-green',
   deferred: 'text-text-muted',
 };
 

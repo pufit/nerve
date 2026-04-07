@@ -184,8 +184,8 @@ export function QuestionBlock({ block }: { block: ToolCallBlockData }) {
         {/* Answered confirmation */}
         {submitted && (
           <div className="px-4 py-2 border-t border-accent/10 flex items-center gap-2">
-            <Check size={12} className="text-green-400" />
-            <span className="text-[11px] text-green-400/70">Answered</span>
+            <Check size={12} className="text-hue-green" />
+            <span className="text-[11px] text-hue-green/70">Answered</span>
           </div>
         )}
       </div>

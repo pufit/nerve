@@ -6,10 +6,10 @@ import { formatMcpName } from '../utils/formatMcpName';
 
 const TYPE_COLORS: Record<string, string> = {
   sdk: 'text-accent bg-accent/10',
-  stdio: 'text-emerald-400 bg-emerald-400/10',
-  sse: 'text-amber-400 bg-amber-400/10',
-  http: 'text-sky-400 bg-sky-400/10',
-  plugin: 'text-violet-400 bg-violet-400/10',
+  stdio: 'text-hue-emerald bg-emerald-400/10',
+  sse: 'text-hue-amber bg-amber-400/10',
+  http: 'text-hue-sky bg-sky-400/10',
+  plugin: 'text-hue-violet bg-violet-400/10',
 };
 
 function ServerCard({ server }: { server: McpServer }) {
@@ -34,7 +34,7 @@ function ServerCard({ server }: { server: McpServer }) {
           </div>
         </div>
         {!server.enabled && (
-          <span className="text-[10px] text-amber-500/70 bg-amber-500/10 px-1.5 py-0.5 rounded ml-2">
+          <span className="text-[10px] text-hue-amber/70 bg-amber-500/10 px-1.5 py-0.5 rounded ml-2">
             disabled
           </span>
         )}
@@ -54,8 +54,8 @@ function ServerCard({ server }: { server: McpServer }) {
         {successRate !== null && (
           <div className="flex items-center gap-1">
             {successRate >= 90
-              ? <CheckCircle size={10} className="text-emerald-500" />
-              : <XCircle size={10} className="text-amber-500" />}
+              ? <CheckCircle size={10} className="text-hue-emerald" />
+              : <XCircle size={10} className="text-hue-amber" />}
             <span>{successRate}%</span>
           </div>
         )}

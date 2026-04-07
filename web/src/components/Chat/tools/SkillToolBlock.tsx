@@ -75,13 +75,13 @@ export function SkillToolBlock({ block }: { block: ToolCallBlockData }) {
       >
         {isRunning
           ? <Loader2 size={14} className="text-accent animate-spin shrink-0" />
-          : <Icon size={14} className={`shrink-0 ${block.isError ? 'text-red-400' : 'text-purple-400'}`} />
+          : <Icon size={14} className={`shrink-0 ${block.isError ? 'text-hue-red' : 'text-hue-purple'}`} />
         }
         <span className="text-[13px] font-medium text-text-secondary">{label}</span>
 
         {/* Skill name badge */}
         {skillName && (
-          <span className="text-[11px] font-mono bg-purple-500/10 text-purple-300 px-1.5 py-0.5 rounded truncate max-w-[200px]">
+          <span className="text-[11px] font-mono bg-purple-500/10 text-hue-purple px-1.5 py-0.5 rounded truncate max-w-[200px]">
             {skillName}
           </span>
         )}
@@ -113,7 +113,7 @@ export function SkillToolBlock({ block }: { block: ToolCallBlockData }) {
             <div className="px-3 py-2 space-y-1.5 max-h-60 overflow-y-auto">
               {skillList.map((s) => (
                 <div key={s.id} className="flex items-start gap-2 text-[12px]">
-                  <Sparkles size={11} className="text-purple-400 mt-0.5 shrink-0" />
+                  <Sparkles size={11} className="text-hue-purple mt-0.5 shrink-0" />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-text-secondary font-medium">{s.name}</span>
@@ -131,7 +131,7 @@ export function SkillToolBlock({ block }: { block: ToolCallBlockData }) {
             <div className="max-h-80 overflow-y-auto">
               {loadedSkillTitle && (
                 <div className="px-3 py-1.5 border-b border-border-subtle flex items-center gap-2">
-                  <Sparkles size={11} className="text-purple-400" />
+                  <Sparkles size={11} className="text-hue-purple" />
                   <span className="text-[12px] text-text-secondary font-medium">{loadedSkillTitle}</span>
                 </div>
               )}
@@ -170,7 +170,7 @@ export function SkillToolBlock({ block }: { block: ToolCallBlockData }) {
             <div className="px-3 py-2">
               {skillName && (
                 <div className="flex items-center gap-2 mb-1.5">
-                  <Plus size={11} className="text-purple-400" />
+                  <Plus size={11} className="text-hue-purple" />
                   <span className="text-[12px] text-text-secondary font-medium">{skillName}</span>
                 </div>
               )}
@@ -183,7 +183,7 @@ export function SkillToolBlock({ block }: { block: ToolCallBlockData }) {
                 </pre>
               )}
               {resultText && !block.isError && (
-                <div className="mt-2 text-[11px] text-emerald-400/70 flex items-center gap-1">
+                <div className="mt-2 text-[11px] text-hue-emerald/70 flex items-center gap-1">
                   <Sparkles size={10} /> {resultText}
                 </div>
               )}
@@ -199,7 +199,7 @@ export function SkillToolBlock({ block }: { block: ToolCallBlockData }) {
                 </pre>
               )}
               {resultText && !block.isError && (
-                <div className="mt-2 text-[11px] text-emerald-400/70 flex items-center gap-1">
+                <div className="mt-2 text-[11px] text-hue-emerald/70 flex items-center gap-1">
                   <Sparkles size={10} /> {resultText}
                 </div>
               )}
@@ -215,7 +215,7 @@ export function SkillToolBlock({ block }: { block: ToolCallBlockData }) {
 
           {/* Error */}
           {block.isError && resultText && (
-            <pre className="px-3 py-2 text-[12px] text-red-400 whitespace-pre-wrap border-t border-border-subtle">
+            <pre className="px-3 py-2 text-[12px] text-hue-red whitespace-pre-wrap border-t border-border-subtle">
               {resultText}
             </pre>
           )}

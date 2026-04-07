@@ -91,7 +91,7 @@ function GenericToolBlock({ block }: { block: ToolCallBlockData }) {
       >
         {isRunning
           ? <Loader2 size={14} className="text-accent animate-spin shrink-0" />
-          : <Icon size={14} className={`shrink-0 ${block.isError ? 'text-red-400' : 'text-text-muted'}`} />
+          : <Icon size={14} className={`shrink-0 ${block.isError ? 'text-hue-red' : 'text-text-muted'}`} />
         }
         <span className="text-[13px] font-mono font-medium text-text-secondary">{block.tool}</span>
         {summary && <span className="text-[12px] text-text-dim truncate font-mono">{summary}</span>}
@@ -116,7 +116,7 @@ function GenericToolBlock({ block }: { block: ToolCallBlockData }) {
               <div className="text-[10px] uppercase tracking-wider text-text-faint mb-1">
                 {block.isError ? 'Error' : 'Result'}
               </div>
-              <pre className={`text-[12px] font-mono whitespace-pre-wrap overflow-x-auto max-h-80 overflow-y-auto bg-bg rounded p-2 border border-border-subtle ${block.isError ? 'text-red-400' : 'text-text-muted'}`}>
+              <pre className={`text-[12px] font-mono whitespace-pre-wrap overflow-x-auto max-h-80 overflow-y-auto bg-bg rounded p-2 border border-border-subtle ${block.isError ? 'text-hue-red' : 'text-text-muted'}`}>
                 {block.result}
               </pre>
             </div>

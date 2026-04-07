@@ -4,17 +4,17 @@ import { Lightbulb } from 'lucide-react';
 import { usePlanStore, type Plan } from '../stores/planStore';
 
 const STATUS_STYLES: Record<string, string> = {
-  pending: 'bg-yellow-400/10 text-yellow-400 border-yellow-400/20',
-  approved: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20',
-  implementing: 'bg-blue-400/10 text-blue-400 border-blue-400/20',
-  declined: 'bg-red-400/10 text-red-400 border-red-400/20',
+  pending: 'bg-yellow-400/10 text-hue-yellow border-yellow-400/20',
+  approved: 'bg-emerald-400/10 text-hue-emerald border-emerald-400/20',
+  implementing: 'bg-blue-400/10 text-hue-blue border-blue-400/20',
+  declined: 'bg-red-400/10 text-hue-red border-red-400/20',
   superseded: 'bg-border-subtle/50 text-text-muted border-border-subtle',
-  failed: 'bg-red-400/10 text-red-400 border-red-400/20',
+  failed: 'bg-red-400/10 text-hue-red border-red-400/20',
 };
 
 const TYPE_STYLES: Record<string, { label: string; className: string }> = {
-  'skill-create': { label: 'Skill', className: 'bg-purple-400/10 text-purple-400 border-purple-400/20' },
-  'skill-update': { label: 'Skill Update', className: 'bg-purple-400/10 text-purple-300 border-purple-400/20' },
+  'skill-create': { label: 'Skill', className: 'bg-purple-400/10 text-hue-purple border-purple-400/20' },
+  'skill-update': { label: 'Skill Update', className: 'bg-purple-400/10 text-hue-purple border-purple-400/20' },
 };
 
 const FILTERS = [

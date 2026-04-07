@@ -66,8 +66,8 @@ function formatSchedule(schedule: string): string {
 
 function jobTypeIcon(type: string) {
   switch (type) {
-    case 'cron': return <Clock size={14} className="text-amber-400" />;
-    case 'source': return <Inbox size={14} className="text-blue-400" />;
+    case 'cron': return <Clock size={14} className="text-hue-amber" />;
+    case 'source': return <Inbox size={14} className="text-hue-blue" />;
     default: return <Clock size={14} className="text-text-dim" />;
   }
 }
@@ -312,7 +312,7 @@ function LogRow({ log, showJobColumn }: { log: CronLog; showJobColumn: boolean }
         <td className="px-3 py-2 text-text-muted">{formatRelativeTime(log.started_at)}</td>
         <td className="px-3 py-2 text-text-dim">
           {!log.finished_at ? (
-            <span className="flex items-center gap-1 text-amber-400">
+            <span className="flex items-center gap-1 text-hue-amber">
               <Loader2 size={12} className="animate-spin" /> running
             </span>
           ) : (
@@ -321,15 +321,15 @@ function LogRow({ log, showJobColumn }: { log: CronLog; showJobColumn: boolean }
         </td>
         <td className="px-3 py-2">
           {log.status === 'success' ? (
-            <span className="flex items-center gap-1 text-emerald-400"><CheckCircle2 size={12} /> ok</span>
+            <span className="flex items-center gap-1 text-hue-emerald"><CheckCircle2 size={12} /> ok</span>
           ) : log.status === 'error' ? (
-            <span className="flex items-center gap-1 text-red-400"><XCircle size={12} /> error</span>
+            <span className="flex items-center gap-1 text-hue-red"><XCircle size={12} /> error</span>
           ) : (
             <span className="text-text-dim">{log.status || '—'}</span>
           )}
         </td>
         <td className="px-3 py-2 text-text-dim max-w-[300px]">
-          <span className={`truncate block ${log.error ? 'text-red-400/70' : ''}`}>
+          <span className={`truncate block ${log.error ? 'text-hue-red/70' : ''}`}>
             {preview}{isLong && !expanded ? '…' : ''}
           </span>
         </td>

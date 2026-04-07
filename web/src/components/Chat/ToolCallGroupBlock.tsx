@@ -44,7 +44,7 @@ export function ToolCallGroupBlock({ group }: { group: ToolCallGroup }) {
         >
           {hasRunning
             ? <Loader2 size={12} className="text-accent animate-spin shrink-0" />
-            : <Icon size={12} className={`shrink-0 ${hasError ? 'text-red-400' : 'text-text-faint'}`} />
+            : <Icon size={12} className={`shrink-0 ${hasError ? 'text-hue-red' : 'text-text-faint'}`} />
           }
           <span className="font-mono font-medium">
             {expanded ? 'Collapse' : `Show ${hiddenCount} more`}

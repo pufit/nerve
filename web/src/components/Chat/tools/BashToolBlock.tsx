@@ -16,9 +16,9 @@ export function BashToolBlock({ block }: { block: ToolCallBlockData }) {
       >
         {isRunning
           ? <Loader2 size={14} className="text-accent animate-spin shrink-0" />
-          : <Terminal size={14} className={`shrink-0 ${block.isError ? 'text-red-400' : 'text-emerald-400'}`} />
+          : <Terminal size={14} className={`shrink-0 ${block.isError ? 'text-hue-red' : 'text-hue-emerald'}`} />
         }
-        <span className="text-emerald-500 text-[13px] font-mono select-none">$</span>
+        <span className="text-hue-emerald text-[13px] font-mono select-none">$</span>
         <span className="text-[13px] font-mono text-text-secondary truncate">{truncatedCmd}</span>
         <div className="ml-auto shrink-0">
           {expanded ? <ChevronDown size={14} className="text-text-faint" /> : <ChevronRight size={14} className="text-text-faint" />}
@@ -36,7 +36,7 @@ export function BashToolBlock({ block }: { block: ToolCallBlockData }) {
 
           {/* Output */}
           {block.result !== undefined && (
-            <pre className={`px-3 py-2 text-[12px] font-mono whitespace-pre-wrap max-h-80 overflow-y-auto ${block.isError ? 'text-red-400' : 'text-text-muted'}`}>
+            <pre className={`px-3 py-2 text-[12px] font-mono whitespace-pre-wrap max-h-80 overflow-y-auto ${block.isError ? 'text-hue-red' : 'text-text-muted'}`}>
               {block.result}
             </pre>
           )}

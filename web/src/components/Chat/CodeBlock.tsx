@@ -22,7 +22,7 @@ export function CodeBlock({ className, children }: { className?: string; childre
           className="text-text-dim hover:text-text-muted cursor-pointer p-1"
           title="Copy"
         >
-          {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+          {copied ? <Check size={14} className="text-hue-emerald" /> : <Copy size={14} />}
         </button>
       </div>
       <pre className="!mt-0 !rounded-t-none !border-t-0">

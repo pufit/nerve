@@ -63,7 +63,7 @@ function TodoRow({ todo }: { todo: TodoItem }) {
   return (
     <div className={`todo-row flex items-center gap-2 py-0.5 text-[13px] transition-opacity duration-300 ${isCompleted ? 'opacity-50' : ''}`}>
       {isCompleted ? (
-        <CheckCircle2 size={14} className="text-green-500 shrink-0 todo-icon-enter" />
+        <CheckCircle2 size={14} className="text-hue-green shrink-0 todo-icon-enter" />
       ) : isActive ? (
         <Loader2 size={14} className="text-accent shrink-0 animate-spin" />
       ) : (

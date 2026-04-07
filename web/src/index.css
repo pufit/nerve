@@ -32,6 +32,24 @@
   --color-error: var(--theme-error);
   --color-warning: var(--theme-warning);
   --color-info: var(--theme-info);
+  /* Diff */
+  --color-diff-add: var(--theme-diff-add);
+  --color-diff-del: var(--theme-diff-del);
+  --color-diff-add-bg: var(--theme-diff-add-bg);
+  --color-diff-del-bg: var(--theme-diff-del-bg);
+  /* Hue indicators — theme-adaptive shades for badges, status, tool identity */
+  --color-hue-yellow: var(--theme-hue-yellow);
+  --color-hue-blue: var(--theme-hue-blue);
+  --color-hue-emerald: var(--theme-hue-emerald);
+  --color-hue-green: var(--theme-hue-green);
+  --color-hue-red: var(--theme-hue-red);
+  --color-hue-purple: var(--theme-hue-purple);
+  --color-hue-amber: var(--theme-hue-amber);
+  --color-hue-cyan: var(--theme-hue-cyan);
+  --color-hue-orange: var(--theme-hue-orange);
+  --color-hue-teal: var(--theme-hue-teal);
+  --color-hue-sky: var(--theme-hue-sky);
+  --color-hue-violet: var(--theme-hue-violet);
 }
 
 /* ── Dark palette (default) ── */
@@ -60,6 +78,23 @@
   --theme-error: #f87171;
   --theme-warning: #fbbf24;
   --theme-info: #60a5fa;
+  --theme-diff-add: var(--color-green-300);    /* original: light pastel text */
+  --theme-diff-del: var(--color-red-300);      /* original: light pastel text */
+  --theme-diff-add-bg: var(--color-green-950); /* original: very dark tint base */
+  --theme-diff-del-bg: var(--color-red-950);   /* original: very dark tint base */
+  /* Hue indicators: -400 for dark mode (bright on dark bg) */
+  --theme-hue-yellow: var(--color-yellow-400);
+  --theme-hue-blue: var(--color-blue-400);
+  --theme-hue-emerald: var(--color-emerald-400);
+  --theme-hue-green: var(--color-green-400);
+  --theme-hue-red: var(--color-red-400);
+  --theme-hue-purple: var(--color-purple-400);
+  --theme-hue-amber: var(--color-amber-400);
+  --theme-hue-cyan: var(--color-cyan-400);
+  --theme-hue-orange: var(--color-orange-400);
+  --theme-hue-teal: var(--color-teal-400);
+  --theme-hue-sky: var(--color-sky-400);
+  --theme-hue-violet: var(--color-violet-400);
 }
 
 /* ── Light palette (explicit) ── */
@@ -88,6 +123,23 @@
   --theme-error: #dc2626;
   --theme-warning: #d97706;
   --theme-info: #2563eb;
+  --theme-diff-add: var(--color-green-800);    /* dark text on light bg */
+  --theme-diff-del: var(--color-red-800);      /* dark text on light bg */
+  --theme-diff-add-bg: var(--color-green-300); /* light tint base */
+  --theme-diff-del-bg: var(--color-red-300);   /* light tint base */
+  /* Hue indicators: -600 for light mode (dark on light bg) */
+  --theme-hue-yellow: var(--color-yellow-600);
+  --theme-hue-blue: var(--color-blue-600);
+  --theme-hue-emerald: var(--color-emerald-600);
+  --theme-hue-green: var(--color-green-600);
+  --theme-hue-red: var(--color-red-600);
+  --theme-hue-purple: var(--color-purple-600);
+  --theme-hue-amber: var(--color-amber-600);
+  --theme-hue-cyan: var(--color-cyan-600);
+  --theme-hue-orange: var(--color-orange-400);
+  --theme-hue-teal: var(--color-teal-600);
+  --theme-hue-sky: var(--color-sky-600);
+  --theme-hue-violet: var(--color-violet-600);
 }
 
 /* ── System preference (when no explicit data-theme) ── */
@@ -117,6 +169,22 @@
     --theme-error: #dc2626;
     --theme-warning: #d97706;
     --theme-info: #2563eb;
+    --theme-diff-add: var(--color-green-800);    /* dark text on light bg */
+    --theme-diff-del: var(--color-red-800);      /* dark text on light bg */
+    --theme-diff-add-bg: var(--color-green-300); /* light tint base */
+    --theme-diff-del-bg: var(--color-red-300);   /* light tint base */
+    --theme-hue-yellow: var(--color-yellow-600);
+    --theme-hue-blue: var(--color-blue-600);
+    --theme-hue-emerald: var(--color-emerald-600);
+    --theme-hue-green: var(--color-green-600);
+    --theme-hue-red: var(--color-red-600);
+    --theme-hue-purple: var(--color-purple-600);
+    --theme-hue-amber: var(--color-amber-600);
+    --theme-hue-cyan: var(--color-cyan-600);
+    --theme-hue-orange: var(--color-orange-400);
+    --theme-hue-teal: var(--color-teal-600);
+    --theme-hue-sky: var(--color-sky-600);
+    --theme-hue-violet: var(--color-violet-600);
   }
 }
 

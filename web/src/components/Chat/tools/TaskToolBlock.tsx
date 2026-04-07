@@ -3,11 +3,11 @@ import { ChevronRight, ChevronDown, CheckSquare, ListTodo, Plus, CheckCircle, Pe
 import type { ToolCallBlockData } from '../../../types/chat';
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-yellow-500/15 text-yellow-400',
-  'in-progress': 'bg-blue-500/15 text-blue-400',
-  'in_progress': 'bg-blue-500/15 text-blue-400',
-  done: 'bg-green-500/15 text-green-400',
-  completed: 'bg-green-500/15 text-green-400',
+  pending: 'bg-yellow-500/15 text-hue-yellow',
+  'in-progress': 'bg-blue-500/15 text-hue-blue',
+  'in_progress': 'bg-blue-500/15 text-hue-blue',
+  done: 'bg-green-500/15 text-hue-green',
+  completed: 'bg-green-500/15 text-hue-green',
   deferred: 'bg-border-subtle text-text-muted',
 };
 
@@ -93,7 +93,7 @@ export function TaskToolBlock({ block }: { block: ToolCallBlockData }) {
       >
         {isRunning
           ? <Loader2 size={14} className="text-accent animate-spin shrink-0" />
-          : <Icon size={14} className={`shrink-0 ${block.isError ? 'text-red-400' : isDone ? 'text-green-400' : isCreate ? 'text-blue-400' : 'text-text-muted'}`} />
+          : <Icon size={14} className={`shrink-0 ${block.isError ? 'text-hue-red' : isDone ? 'text-hue-green' : isCreate ? 'text-hue-blue' : 'text-text-muted'}`} />
         }
         <span className="text-[13px] font-medium text-text-secondary shrink-0 whitespace-nowrap">{label}</span>
         {title && <span className="text-[12px] text-text-muted truncate">{title}</span>}
@@ -116,7 +116,7 @@ export function TaskToolBlock({ block }: { block: ToolCallBlockData }) {
           {isCreate && title && (
             <div className="px-3 py-2">
               <div className="text-[12px] text-text-secondary flex items-center gap-2">
-                <Plus size={11} className="text-blue-400" />
+                <Plus size={11} className="text-hue-blue" />
                 <span className="font-medium">{title}</span>
               </div>
               {block.input.content ? (
@@ -150,20 +150,20 @@ export function TaskToolBlock({ block }: { block: ToolCallBlockData }) {
               ))}
             </div>
           ) : resultText && !isCreate && !isDone && !isUpdate ? (
-            <pre className={`px-3 py-2 text-[12px] whitespace-pre-wrap max-h-60 overflow-y-auto ${block.isError ? 'text-red-400' : 'text-text-muted'}`}>
+            <pre className={`px-3 py-2 text-[12px] whitespace-pre-wrap max-h-60 overflow-y-auto ${block.isError ? 'text-hue-red' : 'text-text-muted'}`}>
               {resultText}
             </pre>
           ) : null}
 
           {/* Success message */}
           {(isCreate || isDone) && resultText && !block.isError && !taskList.length && (
-            <div className="px-3 py-1.5 text-[11px] text-green-400/70 border-t border-border-subtle">
+            <div className="px-3 py-1.5 text-[11px] text-hue-green/70 border-t border-border-subtle">
               {isDone ? 'Task completed' : 'Task created'}
             </div>
           )}
 
           {block.isError && resultText && (
-            <pre className="px-3 py-2 text-[12px] text-red-400 whitespace-pre-wrap border-t border-border-subtle">
+            <pre className="px-3 py-2 text-[12px] text-hue-red whitespace-pre-wrap border-t border-border-subtle">
               {resultText}
             </pre>
           )}

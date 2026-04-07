@@ -23,15 +23,15 @@ function HunkHeader({ hunk }: { hunk: DiffHunk }) {
 // ------------------------------------------------------------------ //
 
 const LINE_STYLES: Record<string, string> = {
-  addition: 'bg-green-500/15',
-  deletion: 'bg-red-500/15',
+  addition: 'bg-diff-add-bg/25',
+  deletion: 'bg-diff-del-bg/25',
   context: '',
   info: '',
 };
 
 const TEXT_STYLES: Record<string, string> = {
-  addition: 'text-green-600',
-  deletion: 'text-red-600',
+  addition: 'text-diff-add/90',
+  deletion: 'text-diff-del/90',
   context: 'text-text-muted',
   info: 'text-text-faint italic',
 };
@@ -44,8 +44,8 @@ const PREFIX: Record<string, string> = {
 };
 
 const GUTTER_STYLES: Record<string, string> = {
-  addition: 'bg-green-500/10 border-green-500/20',
-  deletion: 'bg-red-500/10 border-red-500/20',
+  addition: 'bg-diff-add-bg/15 border-diff-add-bg/30',
+  deletion: 'bg-diff-del-bg/15 border-diff-del-bg/30',
   context: 'border-surface-raised',
   info: 'border-surface-raised',
 };

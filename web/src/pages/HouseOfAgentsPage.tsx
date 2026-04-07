@@ -42,7 +42,7 @@ export function HouseOfAgentsPage() {
           <Users size={48} className="text-text-faint mx-auto" />
           <h2 className="text-lg text-text-muted">houseofagents is not enabled</h2>
           <p className="text-[13px] text-text-faint max-w-md">
-            Enable multi-agent execution by adding <code className="bg-surface-raised px-1.5 py-0.5 rounded text-amber-400">houseofagents.enabled: true</code> to your config.yaml
+            Enable multi-agent execution by adding <code className="bg-surface-raised px-1.5 py-0.5 rounded text-hue-amber">houseofagents.enabled: true</code> to your config.yaml
           </p>
         </div>
       </div>
@@ -55,10 +55,10 @@ export function HouseOfAgentsPage() {
       <div className="border-b border-border-subtle px-6 py-4 bg-bg shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Users size={20} className="text-amber-400" />
+            <Users size={20} className="text-hue-amber" />
             <h1 className="text-lg font-semibold text-text">House of Agents</h1>
             {status.available ? (
-              <span className="px-2 py-0.5 text-[11px] rounded-full bg-emerald-400/10 text-emerald-400 border border-emerald-400/20">
+              <span className="px-2 py-0.5 text-[11px] rounded-full bg-emerald-400/10 text-hue-emerald border border-emerald-400/20">
                 <Check size={10} className="inline mr-1" />
                 {status.version || 'Installed'}
               </span>
@@ -138,7 +138,7 @@ export function HouseOfAgentsPage() {
             <>
               <div className="border-b border-border-subtle px-4 py-2 flex items-center justify-between bg-bg">
                 <div className="flex items-center gap-2">
-                  <FileText size={14} className="text-amber-400" />
+                  <FileText size={14} className="text-hue-amber" />
                   <span className="text-[13px] text-text-secondary font-mono">{selectedPipeline.id}.toml</span>
                 </div>
                 <div className="flex items-center gap-2">

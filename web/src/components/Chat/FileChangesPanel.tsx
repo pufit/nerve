@@ -17,9 +17,9 @@ const STATUS_ICON: Record<string, typeof FileEdit> = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  created: 'text-green-400',
-  modified: 'text-amber-400',
-  deleted: 'text-red-400',
+  created: 'text-diff-add',
+  modified: 'text-warning',
+  deleted: 'text-diff-del',
 };
 
 const STATUS_BADGE: Record<string, string> = {
@@ -61,10 +61,10 @@ function FileCard({ file, onClick }: { file: ModifiedFileSummary; onClick: () =>
         </div>
         <div className="flex items-center gap-1.5 shrink-0 text-[11px] font-mono tabular-nums">
           {file.stats.additions > 0 && (
-            <span className="text-green-400">+{file.stats.additions}</span>
+            <span className="text-diff-add">+{file.stats.additions}</span>
           )}
           {file.stats.deletions > 0 && (
-            <span className="text-red-400">&minus;{file.stats.deletions}</span>
+            <span className="text-diff-del">&minus;{file.stats.deletions}</span>
           )}
         </div>
       </div>
@@ -110,10 +110,10 @@ function FileDetailView({ file, onBack }: { file: ModifiedFileSummary; onBack: (
         <span className={`text-[13px] font-medium ${color}`}>{fileName}</span>
         <div className="flex items-center gap-1.5 text-[11px] font-mono tabular-nums">
           {diff?.stats && diff.stats.additions > 0 && (
-            <span className="text-green-400">+{diff.stats.additions}</span>
+            <span className="text-diff-add">+{diff.stats.additions}</span>
           )}
           {diff?.stats && diff.stats.deletions > 0 && (
-            <span className="text-red-400">&minus;{diff.stats.deletions}</span>
+            <span className="text-diff-del">&minus;{diff.stats.deletions}</span>
           )}
         </div>
       </div>
@@ -130,7 +130,7 @@ function FileDetailView({ file, onBack }: { file: ModifiedFileSummary; onBack: (
           </div>
         )}
         {error && (
-          <div className="px-4 py-4 text-[13px] text-red-400">Failed to load diff: {error}</div>
+          <div className="px-4 py-4 text-[13px] text-hue-red">Failed to load diff: {error}</div>
         )}
         {diff && !loading && <DiffView diff={diff} />}
       </div>
@@ -178,8 +178,8 @@ export function FileChangesPanel() {
       <div className="flex items-center justify-between px-4 py-2 border-b border-border-subtle bg-bg-sunken shrink-0">
         <div className="flex items-center gap-2 text-[12px] text-text-muted">
           <span>{modifiedFiles.length} file{modifiedFiles.length !== 1 ? 's' : ''}</span>
-          {totalAdd > 0 && <span className="text-green-400 font-mono">+{totalAdd}</span>}
-          {totalDel > 0 && <span className="text-red-400 font-mono">&minus;{totalDel}</span>}
+          {totalAdd > 0 && <span className="text-hue-green font-mono">+{totalAdd}</span>}
+          {totalDel > 0 && <span className="text-hue-red font-mono">&minus;{totalDel}</span>}
         </div>
         <button
           onClick={handleRefresh}

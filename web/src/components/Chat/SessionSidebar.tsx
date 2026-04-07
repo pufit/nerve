@@ -277,7 +277,7 @@ export function SessionSidebar({ sessions, activeSession, agentStatus, onSelect,
                     System ({systemSessions.length})
                   </span>
                   {runningSystemCount > 0 && (
-                    <span className="ml-auto flex items-center gap-1 text-[10px] text-emerald-500">
+                    <span className="ml-auto flex items-center gap-1 text-[10px] text-hue-emerald">
                       <span className="relative flex h-1.5 w-1.5">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
@@ -424,7 +424,7 @@ function SessionItem({ session, isActive, isRunning, onSelect, onDelete, onRenam
         }`}
     >
       {isImplementSession(session)
-        ? <Hammer size={13} className="shrink-0 text-violet-400/60" />
+        ? <Hammer size={13} className="shrink-0 text-hue-violet/60" />
         : <MessageSquare size={13} className="shrink-0 opacity-50" />
       }
       <div className="flex-1 min-w-0">
@@ -447,13 +447,13 @@ function SessionItem({ session, isActive, isRunning, onSelect, onDelete, onRenam
           onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
           className={`p-0.5 cursor-pointer transition-opacity ${
             session.starred
-              ? 'text-yellow-500 opacity-100 [&>*:first-child]:block [&>*:last-child]:hidden hover:[&>*:first-child]:hidden hover:[&>*:last-child]:block hover:text-text-muted'
+              ? 'text-hue-yellow opacity-100 [&>*:first-child]:block [&>*:last-child]:hidden hover:[&>*:first-child]:hidden hover:[&>*:last-child]:block hover:text-text-muted'
               : 'text-border-subtle opacity-0 group-hover:opacity-100 hover:text-text-muted'
           }`}
         >
           {session.starred ? (
             <>
-              <Star size={13} className="fill-yellow-500" />
+              <Star size={13} className="fill-hue-yellow" />
               <MoreHorizontal size={14} />
             </>
           ) : (
@@ -471,7 +471,7 @@ function SessionItem({ session, isActive, isRunning, onSelect, onDelete, onRenam
               }}
               className="flex items-center gap-2.5 w-full px-3 py-1.5 text-[13px] text-text-secondary hover:bg-border-subtle cursor-pointer transition-colors"
             >
-              <Star size={14} className={session.starred ? 'text-yellow-500 fill-yellow-500' : ''} />
+              <Star size={14} className={session.starred ? 'text-hue-yellow fill-hue-yellow' : ''} />
               {session.starred ? 'Unstar' : 'Star'}
             </button>
             <button
@@ -493,7 +493,7 @@ function SessionItem({ session, isActive, isRunning, onSelect, onDelete, onRenam
                 setMenuOpen(false);
                 onDelete(session.id);
               }}
-              className="flex items-center gap-2.5 w-full px-3 py-1.5 text-[13px] text-red-400 hover:bg-border-subtle cursor-pointer transition-colors"
+              className="flex items-center gap-2.5 w-full px-3 py-1.5 text-[13px] text-hue-red hover:bg-border-subtle cursor-pointer transition-colors"
             >
               <Trash2 size={14} />
               Delete

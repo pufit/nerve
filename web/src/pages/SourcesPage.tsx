@@ -32,9 +32,9 @@ function formatBytes(bytes: number): string {
 function sourceIcon(source: string) {
   const type = source.split(':')[0];
   switch (type) {
-    case 'gmail': return <Mail size={14} className="text-red-400" />;
-    case 'github': return <Github size={14} className="text-purple-400" />;
-    case 'telegram': return <MessageCircle size={14} className="text-blue-400" />;
+    case 'gmail': return <Mail size={14} className="text-hue-red" />;
+    case 'github': return <Github size={14} className="text-hue-purple" />;
+    case 'telegram': return <MessageCircle size={14} className="text-hue-blue" />;
     default: return <Inbox size={14} className="text-text-dim" />;
   }
 }
@@ -148,7 +148,7 @@ function SourceSidebar() {
                 </span>
                 <span className="shrink-0 flex items-center gap-1.5">
                   {unread > 0 && (
-                    <span className="text-[10px] tabular-nums bg-amber-500/20 text-amber-400 px-1 py-0.5 rounded-full leading-none font-medium">
+                    <span className="text-[10px] tabular-nums bg-amber-500/20 text-hue-amber px-1 py-0.5 rounded-full leading-none font-medium">
                       {unread}
                     </span>
                   )}
@@ -188,7 +188,7 @@ function SourceSidebar() {
               else setPurgeConfirm(activeSource);
             }}
               className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 text-[11px] rounded transition-colors cursor-pointer
-                ${purgeConfirm === activeSource ? 'bg-red-500/15 text-red-600 border border-red-500/30' : 'text-text-dim hover:text-red-400 bg-surface border border-border-subtle'}`}>
+                ${purgeConfirm === activeSource ? 'bg-red-500/15 text-red-600 border border-red-500/30' : 'text-text-dim hover:text-hue-red bg-surface border border-border-subtle'}`}>
               <Trash2 size={10} /> {purgeConfirm === activeSource ? 'Confirm?' : 'Purge source'}
             </button>
           ) : (
@@ -197,7 +197,7 @@ function SourceSidebar() {
               else setPurgeConfirm('_all');
             }}
               className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 text-[11px] rounded transition-colors cursor-pointer
-                ${purgeConfirm === '_all' ? 'bg-red-500/15 text-red-600 border border-red-500/30' : 'text-text-dim hover:text-red-400 bg-surface border border-border-subtle'}`}>
+                ${purgeConfirm === '_all' ? 'bg-red-500/15 text-red-600 border border-red-500/30' : 'text-text-dim hover:text-hue-red bg-surface border border-border-subtle'}`}>
               <Trash2 size={10} /> {purgeConfirm === '_all' ? 'Confirm purge all?' : 'Purge all'}
             </button>
           )}
@@ -212,7 +212,7 @@ function SourceSidebar() {
 
         {/* Health summary */}
         {sourceHealth && Object.values(sourceHealth).some(h => h.state !== 'healthy') && (
-          <div className="text-[11px] text-amber-400 flex items-center gap-1 pt-1">
+          <div className="text-[11px] text-hue-amber flex items-center gap-1 pt-1">
             <AlertTriangle size={10} />
             {Object.values(sourceHealth).filter(h => h.state !== 'healthy').length} source(s) unhealthy
           </div>
@@ -232,7 +232,7 @@ function SourceStats({ info }: { info: SourceOverviewEntry }) {
         <span className="text-text-dim">24h runs</span><span className="text-text-muted">{info.stats_24h.runs}</span>
         <span className="text-text-dim">24h fetched</span><span className="text-text-muted">{info.stats_24h.fetched}</span>
         {info.stats_24h.errors > 0 && <>
-          <span className="text-text-dim">24h errors</span><span className="text-red-400">{info.stats_24h.errors}</span>
+          <span className="text-text-dim">24h errors</span><span className="text-hue-red">{info.stats_24h.errors}</span>
         </>}
       </div>
     </div>
@@ -259,7 +259,7 @@ function AggregateStats({ sources }: { sources: Record<string, SourceOverviewEnt
         <span className="text-text-dim">24h runs</span><span className="text-text-muted">{totals.runs_24h}</span>
         <span className="text-text-dim">24h fetched</span><span className="text-text-muted">{totals.fetched_24h}</span>
         {totals.errors_24h > 0 && <>
-          <span className="text-text-dim">24h errors</span><span className="text-red-400">{totals.errors_24h}</span>
+          <span className="text-text-dim">24h errors</span><span className="text-hue-red">{totals.errors_24h}</span>
         </>}
       </div>
     </div>
@@ -409,9 +409,9 @@ function RunsList() {
                   <td className="px-3 py-2 text-text-muted">{run.records_fetched}/{run.records_processed}</td>
                   <td className="px-3 py-2">
                     {run.error ? (
-                      <span className="flex items-center gap-1 text-red-400"><XCircle size={12} /> error</span>
+                      <span className="flex items-center gap-1 text-hue-red"><XCircle size={12} /> error</span>
                     ) : (
-                      <span className="flex items-center gap-1 text-emerald-400"><CheckCircle2 size={12} /> ok</span>
+                      <span className="flex items-center gap-1 text-hue-emerald"><CheckCircle2 size={12} /> ok</span>
                     )}
                   </td>
                 </tr>
@@ -455,9 +455,9 @@ function RunDetail() {
           {sourceIcon(run.source)}
           <span className="text-[14px] text-text-secondary font-medium">{sourceLabel(run.source)}</span>
           {run.error ? (
-            <span className="flex items-center gap-1 text-[11px] text-red-400"><XCircle size={11} /> error</span>
+            <span className="flex items-center gap-1 text-[11px] text-hue-red"><XCircle size={11} /> error</span>
           ) : (
-            <span className="flex items-center gap-1 text-[11px] text-emerald-400"><CheckCircle2 size={11} /> ok</span>
+            <span className="flex items-center gap-1 text-[11px] text-hue-emerald"><CheckCircle2 size={11} /> ok</span>
           )}
         </div>
         <div className="text-[12px] text-text-dim">{new Date(run.ran_at).toLocaleString()}</div>
@@ -662,7 +662,7 @@ function ConsumersList() {
                 </td>
                 <td className="px-3 py-2 text-right">
                   {c.unread > 0 ? (
-                    <span className="text-amber-400 font-medium tabular-nums">{c.unread}</span>
+                    <span className="text-hue-amber font-medium tabular-nums">{c.unread}</span>
                   ) : (
                     <span className="text-text-faint tabular-nums">0</span>
                   )}
@@ -710,7 +710,7 @@ function ConsumersDetail() {
               </div>
               <div className="flex items-center gap-3 mt-1.5 text-[11px] text-text-dim">
                 <span>{cursorsForSession.length} source{cursorsForSession.length !== 1 ? 's' : ''}</span>
-                {totalUnread > 0 && <span className="text-amber-400">{totalUnread} unread</span>}
+                {totalUnread > 0 && <span className="text-hue-amber">{totalUnread} unread</span>}
               </div>
             </button>
           );

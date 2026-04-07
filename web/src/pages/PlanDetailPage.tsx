@@ -6,17 +6,17 @@ import { MarkdownContent } from '../components/Chat/MarkdownContent';
 import { api } from '../api/client';
 
 const STATUS_STYLES: Record<string, string> = {
-  pending: 'bg-yellow-400/10 text-yellow-400 border-yellow-400/20',
-  approved: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20',
-  implementing: 'bg-blue-400/10 text-blue-400 border-blue-400/20',
-  declined: 'bg-red-400/10 text-red-400 border-red-400/20',
+  pending: 'bg-yellow-400/10 text-hue-yellow border-yellow-400/20',
+  approved: 'bg-emerald-400/10 text-hue-emerald border-emerald-400/20',
+  implementing: 'bg-blue-400/10 text-hue-blue border-blue-400/20',
+  declined: 'bg-red-400/10 text-hue-red border-red-400/20',
   superseded: 'bg-border-subtle/50 text-text-muted border-border-subtle',
-  failed: 'bg-red-400/10 text-red-400 border-red-400/20',
+  failed: 'bg-red-400/10 text-hue-red border-red-400/20',
 };
 
 const TYPE_STYLES: Record<string, { label: string; className: string }> = {
-  'skill-create': { label: 'Skill', className: 'bg-purple-400/10 text-purple-400 border-purple-400/20' },
-  'skill-update': { label: 'Skill Update', className: 'bg-purple-400/10 text-purple-300 border-purple-400/20' },
+  'skill-create': { label: 'Skill', className: 'bg-purple-400/10 text-hue-purple border-purple-400/20' },
+  'skill-update': { label: 'Skill Update', className: 'bg-purple-400/10 text-hue-purple border-purple-400/20' },
 };
 
 interface HoaStatus {
@@ -128,7 +128,7 @@ export function PlanDetailPage() {
           {isImplementing && plan.impl_session_id && (
             <button
               onClick={() => navigate(`/chat/${plan.impl_session_id}`)}
-              className="flex items-center gap-1 text-blue-400 hover:text-blue-300 cursor-pointer"
+              className="flex items-center gap-1 text-hue-blue hover:text-hue-blue cursor-pointer"
             >
               <MessageSquare size={11} /> Watch implementation
             </button>
@@ -164,7 +164,7 @@ export function PlanDetailPage() {
                     onClick={() => setUseMultiAgent(!useMultiAgent)}
                     className={`flex items-center gap-2 px-3 py-1.5 text-[12px] rounded-lg border cursor-pointer transition-colors ${
                       useMultiAgent
-                        ? 'bg-amber-400/10 text-amber-400 border-amber-400/30'
+                        ? 'bg-amber-400/10 text-hue-amber border-amber-400/30'
                         : 'bg-surface-raised text-text-dim border-border-subtle hover:border-border'
                     }`}
                   >

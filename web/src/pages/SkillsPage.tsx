@@ -43,7 +43,7 @@ function SkillCard({ skill }: { skill: Skill }) {
         </div>
         {successRate !== null && (
           <div className="flex items-center gap-1">
-            {successRate >= 90 ? <CheckCircle size={10} className="text-emerald-500" /> : <XCircle size={10} className="text-amber-500" />}
+            {successRate >= 90 ? <CheckCircle size={10} className="text-hue-emerald" /> : <XCircle size={10} className="text-hue-amber" />}
             <span>{successRate}%</span>
           </div>
         )}
@@ -54,7 +54,7 @@ function SkillCard({ skill }: { skill: Skill }) {
           </div>
         )}
         {!skill.enabled && (
-          <span className="text-amber-500/70">disabled</span>
+          <span className="text-hue-amber/70">disabled</span>
         )}
       </div>
     </div>

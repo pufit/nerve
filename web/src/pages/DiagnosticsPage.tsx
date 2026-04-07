@@ -73,7 +73,7 @@ export function DiagnosticsPage() {
   useEffect(() => { load(); }, []);
 
   if (loading) return <div className="flex-1 flex items-center justify-center text-text-faint">Loading...</div>;
-  if (!data) return <div className="flex-1 flex items-center justify-center text-red-400">Failed to load</div>;
+  if (!data) return <div className="flex-1 flex items-center justify-center text-hue-red">Failed to load</div>;
 
   return (
     <div className="h-full overflow-y-auto">
@@ -175,11 +175,11 @@ export function DiagnosticsPage() {
                       </td>
                       <td className="px-4 py-2">
                         {stats.error_count > 0
-                          ? <span className="text-red-400">{stats.error_count}</span>
+                          ? <span className="text-hue-red">{stats.error_count}</span>
                           : <span className="text-text-dim">0</span>
                         }
                       </td>
-                      <td className="px-4 py-2 text-red-400 text-[12px] truncate max-w-xs">{stats.last_error || ''}</td>
+                      <td className="px-4 py-2 text-hue-red text-[12px] truncate max-w-xs">{stats.last_error || ''}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -218,7 +218,7 @@ export function DiagnosticsPage() {
                   </div>
                 )}
                 {data.memorization.last_result?.error && (
-                  <div className="text-[12px] text-red-400 mt-1 truncate">
+                  <div className="text-[12px] text-hue-red mt-1 truncate">
                     Error: {data.memorization.last_result.error}
                   </div>
                 )}
@@ -256,12 +256,12 @@ export function DiagnosticsPage() {
                       <td className="px-4 py-2 font-mono text-text-secondary">{log.job_id}</td>
                       <td className="px-4 py-2">
                         {log.status === 'success'
-                          ? <span className="flex items-center gap-1 text-emerald-400"><CheckCircle2 size={12} /> ok</span>
-                          : <span className="flex items-center gap-1 text-red-400"><XCircle size={12} /> error</span>
+                          ? <span className="flex items-center gap-1 text-hue-emerald"><CheckCircle2 size={12} /> ok</span>
+                          : <span className="flex items-center gap-1 text-hue-red"><XCircle size={12} /> error</span>
                         }
                       </td>
                       <td className="px-4 py-2 text-text-dim">{log.started_at}</td>
-                      <td className="px-4 py-2 text-red-400 text-[12px] truncate max-w-xs">{log.error || ''}</td>
+                      <td className="px-4 py-2 text-hue-red text-[12px] truncate max-w-xs">{log.error || ''}</td>
                     </tr>
                   ))}
                 </tbody>

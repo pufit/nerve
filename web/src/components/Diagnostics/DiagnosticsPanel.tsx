@@ -33,7 +33,7 @@ export function DiagnosticsPanel() {
   }, []);
 
   if (loading) return <div className="p-4 text-text-faint">Loading...</div>;
-  if (!data) return <div className="p-4 text-red-400">Failed to load diagnostics</div>;
+  if (!data) return <div className="p-4 text-hue-red">Failed to load diagnostics</div>;
 
   const syncEntries = Object.entries(data.sync || {}) as [string, SourceStatus | string][];
 
@@ -83,9 +83,9 @@ export function DiagnosticsPanel() {
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{source}</span>
                     {hasError ? (
-                      <span className="text-xs text-red-400">error</span>
+                      <span className="text-xs text-hue-red">error</span>
                     ) : lastRun ? (
-                      <span className="text-xs text-green-400">{processed}/{fetched} records</span>
+                      <span className="text-xs text-hue-green">{processed}/{fetched} records</span>
                     ) : (
                       <span className="text-xs text-text-dim">never run</span>
                     )}
@@ -96,7 +96,7 @@ export function DiagnosticsPanel() {
                     </div>
                   )}
                   {hasError && (
-                    <div className="text-xs text-red-400 mt-1">{status!.error}</div>
+                    <div className="text-xs text-hue-red mt-1">{status!.error}</div>
                   )}
                 </div>
               );
@@ -124,7 +124,7 @@ export function DiagnosticsPanel() {
             </div>
             <div className="p-2 bg-surface-raised rounded">
               <div className="text-xs text-text-dim">FTS Status</div>
-              <div className={data.tasks.fts_ok ? 'text-green-400' : 'text-red-400'}>
+              <div className={data.tasks.fts_ok ? 'text-hue-green' : 'text-hue-red'}>
                 {data.tasks.fts_ok ? '✓ in sync' : '✗ mismatch'}
               </div>
             </div>
@@ -143,12 +143,12 @@ export function DiagnosticsPanel() {
               <div key={log.id} className="p-2 bg-surface-raised rounded text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{log.job_id}</span>
-                  <span className={`text-xs ${log.status === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                  <span className={`text-xs ${log.status === 'success' ? 'text-hue-green' : 'text-hue-red'}`}>
                     {log.status}
                   </span>
                 </div>
                 <div className="text-xs text-text-dim mt-1">{log.started_at}</div>
-                {log.error && <div className="text-xs text-red-400 mt-1">{log.error}</div>}
+                {log.error && <div className="text-xs text-hue-red mt-1">{log.error}</div>}
               </div>
             ))}
           </div>

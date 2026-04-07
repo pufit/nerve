@@ -20,7 +20,7 @@ export function EditToolBlock({ block }: { block: ToolCallBlockData }) {
       >
         {isRunning
           ? <Loader2 size={14} className="text-accent animate-spin shrink-0" />
-          : <FileEdit size={14} className={`shrink-0 ${block.isError ? 'text-red-400' : 'text-amber-400'}`} />
+          : <FileEdit size={14} className={`shrink-0 ${block.isError ? 'text-hue-red' : 'text-hue-amber'}`} />
         }
         <span className="text-[13px] font-mono font-medium text-text-secondary">Edit</span>
         <span className="text-[12px] text-text-dim truncate font-mono">{filePath}</span>
@@ -34,13 +34,13 @@ export function EditToolBlock({ block }: { block: ToolCallBlockData }) {
           {/* Diff view */}
           <div className="font-mono text-[12px] overflow-x-auto max-h-80 overflow-y-auto">
             {oldLines.map((line, i) => (
-              <div key={`old-${i}`} className="px-3 py-0.5 bg-red-500/15 text-red-600">
-                <span className="select-none text-red-500/50 mr-2">-</span>{line}
+              <div key={`old-${i}`} className="px-3 py-0.5 bg-diff-del-bg/15 text-diff-del/80">
+                <span className="select-none text-diff-del/40 mr-2">-</span>{line}
               </div>
             ))}
             {newLines.map((line, i) => (
-              <div key={`new-${i}`} className="px-3 py-0.5 bg-green-500/15 text-green-600">
-                <span className="select-none text-green-500/50 mr-2">+</span>{line}
+              <div key={`new-${i}`} className="px-3 py-0.5 bg-diff-add-bg/15 text-diff-add/80">
+                <span className="select-none text-diff-add/40 mr-2">+</span>{line}
               </div>
             ))}
           </div>
@@ -48,7 +48,7 @@ export function EditToolBlock({ block }: { block: ToolCallBlockData }) {
           {/* Error */}
           {block.isError && block.result && (
             <div className="px-3 py-2 border-t border-border-subtle">
-              <pre className="text-[12px] font-mono text-red-400 whitespace-pre-wrap">{block.result}</pre>
+              <pre className="text-[12px] font-mono text-hue-red whitespace-pre-wrap">{block.result}</pre>
             </div>
           )}
 

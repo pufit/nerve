@@ -3,9 +3,9 @@ import { Calendar, ExternalLink } from 'lucide-react';
 import type { Task } from '../../stores/taskStore';
 
 const STATUS_STYLES: Record<string, string> = {
-  pending: 'bg-yellow-400/10 text-yellow-400 border-yellow-400/20',
-  in_progress: 'bg-blue-400/10 text-blue-400 border-blue-400/20',
-  done: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20',
+  pending: 'bg-yellow-400/10 text-hue-yellow border-yellow-400/20',
+  in_progress: 'bg-blue-400/10 text-hue-blue border-blue-400/20',
+  done: 'bg-emerald-400/10 text-hue-emerald border-emerald-400/20',
   deferred: 'bg-border-subtle/50 text-text-muted border-border-subtle',
 };
 

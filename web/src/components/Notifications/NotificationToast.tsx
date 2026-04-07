@@ -36,7 +36,7 @@ export function NotificationToast() {
           >
             <div className="flex items-start gap-2">
               {isQuestion ? (
-                <HelpCircle size={16} className="text-blue-400 shrink-0 mt-0.5" />
+                <HelpCircle size={16} className="text-hue-blue shrink-0 mt-0.5" />
               ) : (
                 <Bell size={16} className="text-accent shrink-0 mt-0.5" />
               )}

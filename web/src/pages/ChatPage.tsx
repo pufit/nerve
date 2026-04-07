@@ -130,7 +130,7 @@ export function ChatPage() {
                   onClick={openFilesPanel}
                   className={`flex items-center gap-1.5 px-2 py-1 rounded text-[12px] transition-colors cursor-pointer ${
                     filesPanelActive
-                      ? 'text-teal-400 bg-teal-400/10'
+                      ? 'text-hue-teal bg-teal-400/10'
                       : 'text-text-muted hover:text-text-secondary hover:bg-surface-raised'
                   }`}
                   title="Modified files"

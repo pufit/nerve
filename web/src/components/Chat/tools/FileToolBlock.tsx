@@ -20,7 +20,7 @@ export function FileToolBlock({ block }: { block: ToolCallBlockData }) {
       >
         {isRunning
           ? <Loader2 size={14} className="text-accent animate-spin shrink-0" />
-          : <Icon size={14} className={`shrink-0 ${block.isError ? 'text-red-400' : 'text-blue-400'}`} />
+          : <Icon size={14} className={`shrink-0 ${block.isError ? 'text-hue-red' : 'text-hue-blue'}`} />
         }
         <span className="text-[13px] font-mono font-medium text-text-secondary">{block.tool}</span>
         <span className="text-[12px] text-text-dim truncate font-mono">{filePath}</span>
@@ -35,7 +35,7 @@ export function FileToolBlock({ block }: { block: ToolCallBlockData }) {
       {expanded && (
         <div className="border-t border-border">
           {block.result !== undefined && (
-            <pre className={`px-3 py-2 text-[12px] font-mono whitespace-pre-wrap max-h-80 overflow-y-auto bg-bg ${block.isError ? 'text-red-400' : 'text-text-muted'}`}>
+            <pre className={`px-3 py-2 text-[12px] font-mono whitespace-pre-wrap max-h-80 overflow-y-auto bg-bg ${block.isError ? 'text-hue-red' : 'text-text-muted'}`}>
               {block.result}
             </pre>
           )}

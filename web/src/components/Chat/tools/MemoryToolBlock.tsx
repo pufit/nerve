@@ -38,10 +38,10 @@ function parseMemoryItems(text: string): MemoryItem[] {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  event: 'text-blue-400 bg-blue-500/10',
-  profile: 'text-green-400 bg-green-500/10',
-  knowledge: 'text-amber-400 bg-amber-500/10',
-  behavior: 'text-purple-400 bg-purple-500/10',
+  event: 'text-hue-blue bg-blue-500/10',
+  profile: 'text-hue-green bg-green-500/10',
+  knowledge: 'text-hue-amber bg-amber-500/10',
+  behavior: 'text-hue-purple bg-purple-500/10',
 };
 
 export function MemoryToolBlock({ block }: { block: ToolCallBlockData }) {
@@ -81,13 +81,13 @@ export function MemoryToolBlock({ block }: { block: ToolCallBlockData }) {
         className="flex items-center gap-2 w-full px-3 py-2 text-left cursor-pointer hover:bg-surface-raised transition-colors"
       >
         {isRunning
-          ? <Loader2 size={14} className="text-purple-400 animate-spin shrink-0" />
-          : <Icon size={14} className={`shrink-0 ${block.isError ? 'text-red-400' : 'text-purple-400'}`} />
+          ? <Loader2 size={14} className="text-hue-purple animate-spin shrink-0" />
+          : <Icon size={14} className={`shrink-0 ${block.isError ? 'text-hue-red' : 'text-hue-purple'}`} />
         }
-        <span className="text-[13px] font-medium text-purple-300">{label}</span>
+        <span className="text-[13px] font-medium text-hue-purple">{label}</span>
         {truncatedQuery && <span className="text-[12px] text-text-dim truncate">{truncatedQuery}</span>}
         {count && !isRunning && (
-          <span className="text-[10px] text-purple-400/60 shrink-0">{count} items</span>
+          <span className="text-[10px] text-hue-purple/60 shrink-0">{count} items</span>
         )}
         <div className="ml-auto shrink-0">
           {expanded ? <ChevronDown size={14} className="text-text-faint" /> : <ChevronRight size={14} className="text-text-faint" />}
@@ -100,8 +100,8 @@ export function MemoryToolBlock({ block }: { block: ToolCallBlockData }) {
           {isMemorize && query && (
             <div className="px-3 py-2 text-[12px] text-text-secondary">
               <div className="flex items-center gap-1.5 mb-1">
-                <Brain size={11} className="text-purple-400" />
-                <span className="text-[10px] uppercase tracking-wider text-purple-400/60">Memorized</span>
+                <Brain size={11} className="text-hue-purple" />
+                <span className="text-[10px] uppercase tracking-wider text-hue-purple/60">Memorized</span>
               </div>
               <p className="leading-relaxed">{String(query)}</p>
               {block.input.memory_type ? (
@@ -125,19 +125,19 @@ export function MemoryToolBlock({ block }: { block: ToolCallBlockData }) {
               ))}
             </div>
           ) : resultText && !isMemorize ? (
-            <pre className={`px-3 py-2 text-[12px] whitespace-pre-wrap max-h-60 overflow-y-auto ${block.isError ? 'text-red-400' : 'text-text-muted'}`}>
+            <pre className={`px-3 py-2 text-[12px] whitespace-pre-wrap max-h-60 overflow-y-auto ${block.isError ? 'text-hue-red' : 'text-text-muted'}`}>
               {resultText}
             </pre>
           ) : null}
 
           {/* Success/error feedback for memorize */}
           {isMemorize && resultText && !block.isError && (
-            <div className="px-3 py-1.5 text-[11px] text-green-400/70 border-t border-purple-500/10">
+            <div className="px-3 py-1.5 text-[11px] text-hue-green/70 border-t border-purple-500/10">
               Saved to memory
             </div>
           )}
           {block.isError && resultText && (
-            <pre className="px-3 py-2 text-[12px] text-red-400 whitespace-pre-wrap border-t border-purple-500/10">
+            <pre className="px-3 py-2 text-[12px] text-hue-red whitespace-pre-wrap border-t border-purple-500/10">
               {resultText}
             </pre>
           )}

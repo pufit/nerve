@@ -4,8 +4,8 @@ import { Bell, X, CheckCheck, EyeOff } from 'lucide-react';
 import { useNotificationStore, type Notification } from '../stores/notificationStore';
 
 const STATUS_STYLES: Record<string, string> = {
-  pending: 'bg-yellow-400/10 text-yellow-400 border-yellow-400/20',
-  answered: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20',
+  pending: 'bg-yellow-400/10 text-hue-yellow border-yellow-400/20',
+  answered: 'bg-emerald-400/10 text-hue-emerald border-emerald-400/20',
   expired: 'bg-border-subtle/50 text-text-muted border-border-subtle',
   dismissed: 'bg-border-subtle/50 text-text-dim border-border-subtle',
 };
@@ -109,7 +109,7 @@ function NotificationCard({ notif }: { notif: Notification }) {
           <span className={`px-2 py-0.5 rounded-full border ${STATUS_STYLES[notif.status] || STATUS_STYLES.dismissed}`}>
             {notif.status}
           </span>
-          <span className={`px-2 py-0.5 rounded-full border ${notif.type === 'question' ? 'bg-blue-400/10 text-blue-400 border-blue-400/20' : 'bg-border-subtle/50 text-text-muted border-border-subtle'}`}>
+          <span className={`px-2 py-0.5 rounded-full border ${notif.type === 'question' ? 'bg-blue-400/10 text-hue-blue border-blue-400/20' : 'bg-border-subtle/50 text-text-muted border-border-subtle'}`}>
             {notif.type}
           </span>
         </div>
@@ -153,7 +153,7 @@ function NotificationCard({ notif }: { notif: Notification }) {
 
       {/* Show answer if answered */}
       {notif.status === 'answered' && (
-        <div className="mt-2 text-sm text-emerald-400">
+        <div className="mt-2 text-sm text-hue-emerald">
           Answer: {notif.answer} <span className="text-text-faint">(via {notif.answered_by})</span>
         </div>
       )}

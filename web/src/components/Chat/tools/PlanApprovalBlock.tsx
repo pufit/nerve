@@ -24,8 +24,8 @@ export function PlanApprovalBlock({ block }: { block: ToolCallBlockData }) {
       <div className="my-1.5 border border-border rounded-lg bg-surface overflow-hidden">
         <div className="px-3 py-2.5 flex items-center gap-2">
           {wasApproved
-            ? <Check size={14} className="text-green-400" />
-            : <Ban size={14} className="text-red-400" />
+            ? <Check size={14} className="text-hue-green" />
+            : <Ban size={14} className="text-hue-red" />
           }
           <span className="text-[13px] font-medium text-text-secondary">
             {isExitPlan ? 'Plan' : 'Plan mode'} {wasApproved ? 'approved' : 'declined'}

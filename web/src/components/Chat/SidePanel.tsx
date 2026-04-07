@@ -15,10 +15,10 @@ const TAB_ICONS: Record<string, typeof Bot> = {
 };
 
 const TAB_COLORS: Record<string, string> = {
-  Plan: 'text-amber-400',
-  Explore: 'text-cyan-400',
+  Plan: 'text-hue-amber',
+  Explore: 'text-hue-cyan',
   'general-purpose': 'text-link',
-  files: 'text-teal-400',
+  files: 'text-hue-teal',
 };
 
 function formatElapsed(startedAt: number, completedAt?: number): string {
@@ -68,7 +68,7 @@ function TabBar({ panels, activeId, onFocus, onClose }: {
           >
             {tab.status === 'running'
               ? <Loader2 size={11} className={`animate-spin ${color}`} />
-              : <Icon size={11} className={tab.isError ? 'text-red-400' : color} />
+              : <Icon size={11} className={tab.isError ? 'text-hue-red' : color} />
             }
             <span className="truncate max-w-[100px]">{tab.label}</span>
             {tab.status !== 'running' && tab.completedAt && (
@@ -100,7 +100,7 @@ function TabHeader({ tab, onClose }: { tab: PanelTab; onClose: () => void }) {
       <div className="flex items-center gap-2 min-w-0">
         {tab.status === 'running'
           ? <Loader2 size={14} className={`animate-spin shrink-0 ${color}`} />
-          : <Icon size={14} className={`shrink-0 ${tab.isError ? 'text-red-400' : color}`} />
+          : <Icon size={14} className={`shrink-0 ${tab.isError ? 'text-hue-red' : color}`} />
         }
         <span className="text-[13px] font-medium text-text-secondary">{tab.label}</span>
         {tab.description && (

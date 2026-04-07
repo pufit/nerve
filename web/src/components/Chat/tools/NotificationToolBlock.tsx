@@ -30,7 +30,7 @@ export function NotificationToolBlock({ block }: { block: ToolCallBlockData }) {
   const body = String(block.input.body || '');
 
   const Icon = isAsk ? HelpCircle : Bell;
-  const iconColor = block.isError ? 'text-red-400' : isAsk ? 'text-blue-400' : 'text-amber-400';
+  const iconColor = block.isError ? 'text-hue-red' : isAsk ? 'text-hue-blue' : 'text-hue-amber';
   const label = isNotify ? 'Notify' : 'Ask User';
 
   const resultText = block.result ? extractText(block.result) : '';
@@ -50,18 +50,18 @@ export function NotificationToolBlock({ block }: { block: ToolCallBlockData }) {
         {title && <span className="text-[12px] text-text-muted truncate">{title}</span>}
         {priority !== 'normal' && (
           <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${
-            priority === 'urgent' ? 'bg-red-500/15 text-red-400' :
-            priority === 'high' ? 'bg-orange-400/15 text-orange-400' :
+            priority === 'urgent' ? 'bg-red-500/15 text-hue-red' :
+            priority === 'high' ? 'bg-orange-400/15 text-hue-orange' :
             'bg-border-subtle text-text-muted'
           }`}>
             {priority}
           </span>
         )}
         {wait && isAsk && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 shrink-0">blocking</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-hue-blue shrink-0">blocking</span>
         )}
         {isSent && !isRunning && (
-          <span className="text-[10px] text-emerald-400/70 shrink-0">sent</span>
+          <span className="text-[10px] text-hue-emerald/70 shrink-0">sent</span>
         )}
         <div className="ml-auto shrink-0">
           {expanded ? <ChevronDown size={14} className="text-text-faint" /> : <ChevronRight size={14} className="text-text-faint" />}
@@ -89,7 +89,7 @@ export function NotificationToolBlock({ block }: { block: ToolCallBlockData }) {
           {/* Result */}
           {resultText && (
             <div className="px-3 py-2 border-t border-border-subtle">
-              <pre className={`text-[12px] font-mono whitespace-pre-wrap ${block.isError ? 'text-red-400' : 'text-text-muted'}`}>
+              <pre className={`text-[12px] font-mono whitespace-pre-wrap ${block.isError ? 'text-hue-red' : 'text-text-muted'}`}>
                 {resultText}
               </pre>
             </div>

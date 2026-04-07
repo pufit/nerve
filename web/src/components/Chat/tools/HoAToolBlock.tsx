@@ -4,9 +4,9 @@ import type { ToolCallBlockData } from '../../../types/chat';
 import { MarkdownContent } from '../MarkdownContent';
 
 const PROVIDER_COLORS: Record<string, string> = {
-  anthropic: 'bg-orange-400/20 text-orange-300 border-orange-400/30',
-  openai: 'bg-emerald-400/20 text-emerald-300 border-emerald-400/30',
-  gemini: 'bg-blue-400/20 text-blue-300 border-blue-400/30',
+  anthropic: 'bg-orange-400/20 text-hue-orange border-orange-400/30',
+  openai: 'bg-emerald-400/20 text-hue-emerald border-emerald-400/30',
+  gemini: 'bg-blue-400/20 text-hue-blue border-blue-400/30',
 };
 
 function getProviderStyle(kind?: string) {
@@ -49,14 +49,14 @@ export function HoAToolBlock({ block }: { block: ToolCallBlockData }) {
         className="flex items-center gap-2 w-full px-3 py-2 text-left cursor-pointer hover:bg-surface-raised transition-colors"
       >
         {isRunning
-          ? <Loader2 size={14} className="text-amber-400 animate-spin shrink-0" />
+          ? <Loader2 size={14} className="text-hue-amber animate-spin shrink-0" />
           : block.isError
-            ? <X size={14} className="text-red-400 shrink-0" />
-            : <Check size={14} className="text-emerald-400 shrink-0" />
+            ? <X size={14} className="text-hue-red shrink-0" />
+            : <Check size={14} className="text-hue-emerald shrink-0" />
         }
-        <Users size={14} className="text-amber-400 shrink-0" />
+        <Users size={14} className="text-hue-amber shrink-0" />
         <span className="text-[13px] font-mono font-medium text-text-secondary">hoa_execute</span>
-        <span className="text-[12px] text-amber-400/60 font-mono">{mode}</span>
+        <span className="text-[12px] text-hue-amber/60 font-mono">{mode}</span>
         {activeLabel && isRunning && <span className="text-[12px] text-text-muted">· {activeLabel}</span>}
         {agents && !activeLabel && <span className="text-[12px] text-text-faint font-mono truncate">{agents}</span>}
 
@@ -130,7 +130,7 @@ export function HoAToolBlock({ block }: { block: ToolCallBlockData }) {
                 {block.isError ? 'Error' : 'Result'}
               </div>
               {block.isError ? (
-                <pre className="text-[12px] font-mono whitespace-pre-wrap overflow-x-auto max-h-80 overflow-y-auto bg-bg rounded p-2 border border-border-subtle text-red-400">
+                <pre className="text-[12px] font-mono whitespace-pre-wrap overflow-x-auto max-h-80 overflow-y-auto bg-bg rounded p-2 border border-border-subtle text-hue-red">
                   {block.result}
                 </pre>
               ) : (

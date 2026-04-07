@@ -6,10 +6,10 @@ import { formatMcpName } from '../utils/formatMcpName';
 
 const TYPE_COLORS: Record<string, string> = {
   sdk: 'text-accent bg-accent/10',
-  stdio: 'text-emerald-400 bg-emerald-400/10',
-  sse: 'text-amber-400 bg-amber-400/10',
-  http: 'text-sky-400 bg-sky-400/10',
-  plugin: 'text-violet-400 bg-violet-400/10',
+  stdio: 'text-hue-emerald bg-emerald-400/10',
+  sse: 'text-hue-amber bg-amber-400/10',
+  http: 'text-hue-sky bg-sky-400/10',
+  plugin: 'text-hue-violet bg-violet-400/10',
 };
 
 function UsageBar({ total, success }: { total: number; success: number }) {
@@ -67,7 +67,7 @@ export function McpServerDetailPage() {
             {s.type}
           </span>
           {!s.enabled && (
-            <span className="text-[10px] text-amber-500/70 bg-amber-500/10 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] text-hue-amber/70 bg-amber-500/10 px-1.5 py-0.5 rounded">
               disabled
             </span>
           )}
@@ -100,7 +100,7 @@ export function McpServerDetailPage() {
                       </span>
                       <span className="text-text-dim tabular-nums">{t.invocations} calls</span>
                       {tRate !== null && (
-                        <span className={`tabular-nums ${tRate >= 90 ? 'text-emerald-500' : 'text-amber-500'}`}>
+                        <span className={`tabular-nums ${tRate >= 90 ? 'text-hue-emerald' : 'text-hue-amber'}`}>
                           {tRate}%
                         </span>
                       )}
@@ -129,8 +129,8 @@ export function McpServerDetailPage() {
                     className="flex items-center gap-3 px-3 py-1.5 text-[11px] bg-surface-raised border border-border rounded"
                   >
                     {u.success
-                      ? <CheckCircle size={10} className="text-emerald-500 shrink-0" />
-                      : <XCircle size={10} className="text-red-500 shrink-0" />}
+                      ? <CheckCircle size={10} className="text-hue-emerald shrink-0" />
+                      : <XCircle size={10} className="text-hue-red shrink-0" />}
                     <span className="text-text font-mono truncate flex-1">
                       {u.tool_name}
                     </span>
@@ -161,7 +161,7 @@ export function McpServerDetailPage() {
                   <>
                     <div className="flex justify-between">
                       <span className="text-text-muted">Success Rate</span>
-                      <span className={successRate >= 90 ? 'text-emerald-400' : 'text-amber-400'}>
+                      <span className={successRate >= 90 ? 'text-hue-emerald' : 'text-hue-amber'}>
                         {successRate}%
                       </span>
                     </div>

@@ -151,7 +151,7 @@ function ItemRow({ item, isEditing, isDeleting, onEdit, onDelete, onSave, onCanc
       <span className="text-[12px] text-text-secondary flex-1">{item.summary}</span>
       <div className="shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <button onClick={onEdit} className="p-1 rounded hover:bg-surface-raised text-text-dim hover:text-text-muted cursor-pointer transition-colors" title="Edit"><Pencil size={12} /></button>
-        <button onClick={onDelete} className="p-1 rounded hover:bg-surface-raised text-text-dim hover:text-red-400 cursor-pointer transition-colors" title="Delete"><Trash2 size={12} /></button>
+        <button onClick={onDelete} className="p-1 rounded hover:bg-surface-raised text-text-dim hover:text-hue-red cursor-pointer transition-colors" title="Delete"><Trash2 size={12} /></button>
       </div>
     </div>
   );
@@ -489,7 +489,7 @@ function TimelineView() {
                     </div>
                     <div className="shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => setEditingItemId(item.id)} className="p-1 rounded hover:bg-surface-raised text-text-dim hover:text-text-muted cursor-pointer transition-colors" title="Edit"><Pencil size={12} /></button>
-                      <button onClick={() => setDeletingItemId(item.id)} className="p-1 rounded hover:bg-surface-raised text-text-dim hover:text-red-400 cursor-pointer transition-colors" title="Delete"><Trash2 size={12} /></button>
+                      <button onClick={() => setDeletingItemId(item.id)} className="p-1 rounded hover:bg-surface-raised text-text-dim hover:text-hue-red cursor-pointer transition-colors" title="Delete"><Trash2 size={12} /></button>
                     </div>
                   </div>
                 );

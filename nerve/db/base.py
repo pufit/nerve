@@ -26,6 +26,7 @@ from nerve.db.sessions import SessionStore
 from nerve.db.skills import SkillStore
 from nerve.db.sources import SourceStore
 from nerve.db.tasks import TaskStore
+from nerve.db.usage import UsageStore
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,7 @@ class Database(
     SkillStore,
     McpStore,
     AuditStore,
+    UsageStore,
 ):
     """Async SQLite database wrapper.
 

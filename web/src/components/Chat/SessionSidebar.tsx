@@ -429,6 +429,9 @@ function SessionItem({ session, isActive, isRunning, onSelect, onDelete, onRenam
       }
       <div className="flex-1 min-w-0">
         <div className="truncate text-[13px]">{cleanTitle(session)}</div>
+        {(session.total_cost_usd ?? 0) > 0.005 && (
+          <div className="text-[10px] text-text-faint tabular-nums">${session.total_cost_usd!.toFixed(2)}</div>
+        )}
       </div>
 
       {/* Status indicator (always visible) */}

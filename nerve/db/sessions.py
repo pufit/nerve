@@ -80,6 +80,7 @@ class SessionStore:
         async with self._atomic():
             await self.db.execute("DELETE FROM session_file_snapshots WHERE session_id = ?", (session_id,))
             await self.db.execute("DELETE FROM session_events WHERE session_id = ?", (session_id,))
+            await self.db.execute("DELETE FROM session_usage WHERE session_id = ?", (session_id,))
             await self.db.execute("DELETE FROM channel_sessions WHERE session_id = ?", (session_id,))
             await self.db.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
             await self.db.execute("DELETE FROM sessions WHERE id = ?", (session_id,))

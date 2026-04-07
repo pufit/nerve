@@ -76,6 +76,40 @@ async def diagnostics(user: dict = Depends(require_auth)):
     # Task / FTS health (async via DB method)
     tasks_health = await deps.db.get_task_health_stats()
 
+    # Token usage analytics
+    usage_data = {}
+    try:
+        usage_summary = await deps.db.get_usage_summary(days=7)
+        cache_stats = await deps.db.get_cache_hit_rate(days=7)
+        daily_usage = await deps.db.get_usage_by_period(days=7)
+        source_usage = await deps.db.get_usage_by_source(days=7)
+
+        # Add estimated cost to each daily entry
+        from nerve.db.usage import estimate_cost_from_totals
+        for day in daily_usage:
+            day["est_cost_usd"] = round(estimate_cost_from_totals({
+                "total_input": day.get("input_tokens", 0),
+                "total_output": day.get("output_tokens", 0),
+                "total_cache_read": day.get("cache_read", 0),
+                "total_cache_creation": day.get("cache_creation", 0),
+            }), 4)
+        for src in source_usage:
+            src["est_cost_usd"] = round(estimate_cost_from_totals({
+                "total_input": src.get("input_tokens", 0),
+                "total_output": src.get("output_tokens", 0),
+                "total_cache_read": src.get("cache_read", 0),
+                "total_cache_creation": src.get("cache_creation", 0),
+            }), 4)
+
+        usage_data = {
+            "last_7d": usage_summary,
+            "cache_hit_rate": cache_stats,
+            "daily": daily_usage,
+            "by_source": source_usage,
+        }
+    except Exception:
+        pass
+
     return {
         "system": {
             "platform": platform.platform(),
@@ -94,6 +128,7 @@ async def diagnostics(user: dict = Depends(require_auth)):
             **_memorize_stats,
             "sessions_pending": pending_count,
         },
+        "usage": usage_data,
     }
 
 

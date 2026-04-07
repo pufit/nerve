@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 // import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
-import { Server, HardDrive, RefreshCw, Clock, CheckCircle2, XCircle, Database, Activity, Brain, Play, Loader2 } from 'lucide-react';
+import { Server, HardDrive, RefreshCw, Clock, CheckCircle2, XCircle, Database, Activity, Brain, Play, Loader2, DollarSign, Zap, BarChart3 } from 'lucide-react';
 
 function formatUptime(isoDate: string): string {
   const diff = Date.now() - new Date(isoDate).getTime();
@@ -12,6 +12,12 @@ function formatUptime(isoDate: string): string {
     return `${days}d ${hours % 24}h`;
   }
   return `${hours}h ${minutes}m`;
+}
+
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
 }
 
 function RunButton({ onClick, label, title }: { onClick: () => Promise<void>; label: string; title: string }) {
@@ -75,6 +81,8 @@ export function DiagnosticsPage() {
   if (loading) return <div className="flex-1 flex items-center justify-center text-text-faint">Loading...</div>;
   if (!data) return <div className="flex-1 flex items-center justify-center text-hue-red">Failed to load</div>;
 
+  const usage = data.usage;
+
   return (
     <div className="h-full overflow-y-auto">
       <div className="border-b border-border-subtle px-6 py-3 flex items-center justify-between bg-bg shrink-0">
@@ -92,6 +100,86 @@ export function DiagnosticsPage() {
           <InfoCard icon={HardDrive} label="Memory" value={`${data.system?.memory_mb} MB`} />
           <InfoCard icon={HardDrive} label="Disk Free" value={`${data.system?.disk_free_gb} / ${data.system?.disk_total_gb} GB`} />
         </div>
+
+        {/* Usage & Cost */}
+        {usage?.last_7d && (
+          <section>
+            <h2 className="text-[14px] font-medium text-text-muted mb-3 flex items-center gap-2">
+              <DollarSign size={14} /> Usage & Cost (7 days)
+            </h2>
+
+            {/* Summary cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+              <InfoCard icon={BarChart3} label="Tokens (in/out)"
+                value={`${formatTokens(usage.last_7d.total_input)} / ${formatTokens(usage.last_7d.total_output)}`} />
+              <InfoCard icon={DollarSign} label="Est. Cost"
+                value={`$${usage.last_7d.est_cost_usd?.toFixed(2) ?? '0.00'}`} />
+              <InfoCard icon={Zap} label="Cache Hit Rate"
+                value={`${((usage.cache_hit_rate?.rate ?? 0) * 100).toFixed(1)}%`} />
+              <InfoCard icon={Activity} label="Turns / Sessions"
+                value={`${usage.last_7d.turns} / ${usage.last_7d.sessions}`} />
+            </div>
+
+            {/* Daily usage chart — simple CSS bar chart */}
+            {usage.daily?.length > 0 && (
+              <div className="mb-3">
+                <div className="text-[11px] text-text-dim mb-2">Daily token usage</div>
+                <div className="flex items-end gap-1 h-20">
+                  {[...usage.daily].reverse().map((day: any) => {
+                    const total = (day.input_tokens || 0) + (day.output_tokens || 0);
+                    const maxTotal = Math.max(...usage.daily.map((d: any) => (d.input_tokens || 0) + (d.output_tokens || 0)));
+                    const heightPct = maxTotal > 0 ? Math.max(2, (total / maxTotal) * 100) : 2;
+                    const dateLabel = day.date?.slice(5) || ''; // MM-DD
+                    return (
+                      <div key={day.date} className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
+                        <div
+                          className="w-full bg-accent/30 rounded-t-sm hover:bg-accent/50 transition-colors relative group"
+                          style={{ height: `${heightPct}%` }}
+                        >
+                          <div className="absolute -top-6 left-1/2 -translate-x-1/2 hidden group-hover:block z-10
+                            bg-surface-raised border border-border-subtle rounded px-1.5 py-0.5 text-[10px] text-text-secondary whitespace-nowrap shadow-lg">
+                            {formatTokens(total)} &middot; ${day.est_cost_usd?.toFixed(2) ?? '0.00'}
+                          </div>
+                        </div>
+                        <span className="text-[9px] text-text-faint tabular-nums">{dateLabel}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* By source breakdown */}
+            {usage.by_source?.length > 0 && (
+              <div className="border border-border-subtle rounded-lg overflow-hidden">
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr className="bg-surface text-text-muted">
+                      <th className="text-left px-4 py-2 font-medium">Source</th>
+                      <th className="text-right px-4 py-2 font-medium">Sessions</th>
+                      <th className="text-right px-4 py-2 font-medium">Turns</th>
+                      <th className="text-right px-4 py-2 font-medium">Input</th>
+                      <th className="text-right px-4 py-2 font-medium">Output</th>
+                      <th className="text-right px-4 py-2 font-medium">Est. Cost</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {usage.by_source.map((src: any) => (
+                      <tr key={src.source} className="border-t border-border-subtle hover:bg-surface">
+                        <td className="px-4 py-2 font-mono text-text-secondary">{src.source}</td>
+                        <td className="px-4 py-2 text-right text-text-dim tabular-nums">{src.sessions}</td>
+                        <td className="px-4 py-2 text-right text-text-dim tabular-nums">{src.turns}</td>
+                        <td className="px-4 py-2 text-right text-text-secondary tabular-nums">{formatTokens(src.input_tokens || 0)}</td>
+                        <td className="px-4 py-2 text-right text-text-secondary tabular-nums">{formatTokens(src.output_tokens || 0)}</td>
+                        <td className="px-4 py-2 text-right text-text-secondary tabular-nums">${src.est_cost_usd?.toFixed(2) ?? '0.00'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
 
         {/* memU Health */}
         {memuHealth && (

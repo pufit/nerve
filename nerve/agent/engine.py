@@ -1721,6 +1721,26 @@ class AgentEngine:
             meta["last_usage"] = usage_data
             await self.db.update_session_metadata(session_id, meta)
 
+            # Persist per-turn usage to session_usage table
+            await self.db.record_turn_usage(
+                session_id=session_id,
+                input_tokens=last_usage.get("input_tokens", 0),
+                output_tokens=last_usage.get("output_tokens", 0),
+                cache_creation=last_usage.get("cache_creation_input_tokens", 0),
+                cache_read=last_usage.get("cache_read_input_tokens", 0),
+                max_context=max_context,
+            )
+
+            # Update total_cost_usd on the session
+            from nerve.db.usage import estimate_turn_cost
+            cost = estimate_turn_cost(last_usage)
+            current_cost = (
+                session_record.get("total_cost_usd", 0) if session_record else 0
+            )
+            await self.db.update_session_fields(session_id, {
+                "total_cost_usd": (current_cost or 0) + cost,
+            })
+
         await broadcaster.broadcast_done(
             session_id,
             usage=last_usage,

@@ -53,6 +53,128 @@ except ImportError:
 
 _SURROGATE_RE = re.compile(r"[\ud800-\udfff]")
 
+# Anthropic API image limits
+_MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5 MB
+_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+
+# Magic byte signatures for supported image formats.
+# Each format maps to a list of valid signatures.  A signature is a list
+# of (magic_bytes, offset) pairs that must ALL match (AND logic).
+_IMAGE_MAGIC: dict[str, list[list[tuple[bytes, int]]]] = {
+    ".png":  [[(b"\x89PNG\r\n\x1a\n", 0)]],
+    ".jpg":  [[(b"\xff\xd8\xff", 0)]],
+    ".jpeg": [[(b"\xff\xd8\xff", 0)]],
+    ".gif":  [[(b"GIF87a", 0)], [(b"GIF89a", 0)]],
+    # WebP is RIFF container: must have RIFF at 0 AND WEBP at 8
+    ".webp": [[(b"RIFF", 0), (b"WEBP", 8)]],
+}
+
+
+def _validate_image_file(file_path: str) -> str | None:
+    """Validate that a file with an image extension contains actual image data.
+
+    Returns None if valid, or an error string describing the problem.
+    This prevents the CLI from base64-encoding non-image files (e.g. HTML
+    redirect pages saved with a .png extension) and poisoning the
+    conversation context with an unprocessable image block.
+    """
+    from pathlib import Path
+
+    ext = Path(file_path).suffix.lower()
+    if ext not in _IMAGE_EXTENSIONS:
+        return None  # Not an image — nothing to validate
+
+    try:
+        size = os.path.getsize(file_path)
+    except OSError:
+        return None  # Let the Read tool handle missing files
+
+    if size == 0:
+        return f"Image file is empty (0 bytes): {file_path}"
+
+    if size > _MAX_IMAGE_BYTES:
+        size_mb = size / (1024 * 1024)
+        return (
+            f"Image file too large ({size_mb:.1f} MB > 5 MB API limit): {file_path}. "
+            f"The Anthropic API rejects images larger than 5 MB."
+        )
+
+    # Check magic bytes
+    magic_specs = _IMAGE_MAGIC.get(ext, [])
+    if not magic_specs:
+        return None  # No magic spec — let it through
+
+    try:
+        with open(file_path, "rb") as f:
+            header = f.read(16)
+    except OSError:
+        return None  # Let the Read tool handle I/O errors
+
+    # Each signature is a list of (bytes, offset) pairs — ALL must match.
+    # Multiple signatures per format are OR'd (e.g. GIF87a vs GIF89a).
+    for signature in magic_specs:
+        if all(
+            header[off: off + len(magic)] == magic
+            for magic, off in signature
+        ):
+            return None  # Valid magic — good to go
+
+    # None of the magic signatures matched
+    # Check if it's actually HTML (common when auth fails on image URLs)
+    is_html = header.lstrip()[:5].lower() in (b"<!doc", b"<html", b"<?xml")
+    hint = (
+        " The file appears to contain HTML — it may be a redirect or error page "
+        "downloaded instead of the actual image."
+        if is_html
+        else " The file header does not match any supported image format "
+        "(JPEG, PNG, GIF, WebP)."
+    )
+    return (
+        f"File {file_path} has {ext} extension but does not contain valid image data.{hint} "
+        f"Reading this file would poison the conversation with an unprocessable image block."
+    )
+
+
+def _validate_image_data(data_b64: str, media_type: str) -> str | None:
+    """Validate base64-encoded image data before sending to the API.
+
+    Returns None if valid, or an error string describing the problem.
+    Used for images entering through Nerve's own pipeline (Telegram, etc).
+    """
+    import base64
+
+    try:
+        raw = base64.b64decode(data_b64[:64])  # Only need first bytes
+    except Exception:
+        return f"Invalid base64 encoding for {media_type} image"
+
+    if len(raw) < 4:
+        return f"Image data too small ({len(raw)} bytes) for {media_type}"
+
+    # Map media_type to extension for magic check
+    type_to_ext = {
+        "image/png": ".png",
+        "image/jpeg": ".jpg",
+        "image/gif": ".gif",
+        "image/webp": ".webp",
+    }
+    ext = type_to_ext.get(media_type)
+    if not ext:
+        return None  # Unknown type — let the API decide
+
+    magic_specs = _IMAGE_MAGIC.get(ext, [])
+    for signature in magic_specs:
+        if all(
+            raw[off: off + len(magic)] == magic
+            for magic, off in signature
+        ):
+            return None  # Valid
+
+    return (
+        f"Image data does not match declared type {media_type}. "
+        f"The file header bytes do not contain a valid {ext.upper().strip('.')} signature."
+    )
+
 
 def _sanitize_surrogates(s: str) -> str:
     """Remove orphaned UTF-16 surrogates that break JSON serialization.
@@ -712,7 +834,7 @@ class AgentEngine:
         return servers
 
     def _build_snapshot_hooks(self, session_id: str) -> dict:
-        """Build PreToolUse hooks for capturing file snapshots before modification."""
+        """Build PreToolUse hooks for file snapshots and image validation."""
         from nerve.agent.interactive import _read_file_safe
 
         captured_files: set[str] = set()
@@ -734,11 +856,49 @@ class AgentEngine:
             # Allow the tool to proceed
             return {"hookSpecificOutput": {"hookEventName": "PreToolUse"}}
 
+        async def _validate_image_hook(hook_input, tool_use_id, context):
+            """PreToolUse hook: validate image files before Read to prevent
+            poisoning the conversation with unprocessable image data.
+
+            The CLI's Read tool detects images by file extension and base64-
+            encodes them into image content blocks.  If the file isn't a valid
+            image (e.g. an HTML redirect saved as .png), the API rejects it
+            with 400 "Could not process image".  Worse, the bad block persists
+            in the CLI's conversation history, causing *every* subsequent turn
+            to fail — an unrecoverable poison loop.
+
+            This hook checks magic bytes and size *before* Read executes,
+            blocking invalid files with a clear error message so the agent
+            can adjust.
+            """
+            tool_input = hook_input.get("tool_input", {})
+            file_path = tool_input.get("file_path", "")
+
+            error = _validate_image_file(file_path)
+            if error:
+                logger.warning(
+                    "Blocked Read of invalid image for session %s: %s",
+                    session_id[:8], error,
+                )
+                return {
+                    "hookSpecificOutput": {
+                        "hookEventName": "PreToolUse",
+                        "permissionDecision": "deny",
+                        "permissionDecisionReason": error,
+                    },
+                }
+
+            return {"hookSpecificOutput": {"hookEventName": "PreToolUse"}}
+
         return {
             "PreToolUse": [
                 HookMatcher(
                     matcher="Edit|Write|NotebookEdit",
                     hooks=[_snapshot_hook],
+                ),
+                HookMatcher(
+                    matcher="Read",
+                    hooks=[_validate_image_hook],
                 ),
             ],
         }
@@ -1223,6 +1383,25 @@ class AgentEngine:
                 for img in images:
                     # PDFs use "document" content block; images use "image"
                     block_type = "document" if img["media_type"] == "application/pdf" else "image"
+
+                    # Validate image data before sending — prevent poisoning
+                    # the CLI's conversation with unprocessable images.
+                    if block_type == "image":
+                        img_error = _validate_image_data(
+                            img["data"], img["media_type"],
+                        )
+                        if img_error:
+                            logger.warning(
+                                "Skipping invalid image for session %s: %s",
+                                session_id[:8], img_error,
+                            )
+                            # Inject as text so the agent knows what happened
+                            content_blocks.append({
+                                "type": "text",
+                                "text": f"[Image skipped: {img_error}]",
+                            })
+                            continue
+
                     content_blocks.append({
                         "type": block_type,
                         "source": {
@@ -1435,13 +1614,44 @@ class AgentEngine:
         except Exception as e:
             error_msg = f"Agent error: {e}"
             logger.error(error_msg, exc_info=True)
-            await broadcaster.broadcast_error(session_id, str(e))
+
+            # --- Poisoned context detection (Layer 2 safety net) ---
+            # If the CLI's conversation history contains an unprocessable
+            # image or document, every subsequent API call re-sends it and
+            # gets 400.  The PreToolUse hook on Read (Layer 1) prevents
+            # most cases, but images can also enter via MCP tools, sub-
+            # agents, or the CLI's own internal processing.
+            # When detected: kill the CLI, clear sdk_session_id so the
+            # next turn starts a fresh conversation.
+            err_str = str(e)
+            is_poisoned = (
+                "Could not process image" in err_str
+                or "Could not process document" in err_str
+            )
+            if is_poisoned:
+                logger.warning(
+                    "Poisoned context detected for session %s: %s — "
+                    "killing CLI and clearing session to prevent loop",
+                    session_id[:8], err_str,
+                )
+                error_msg = (
+                    "The conversation contained an unprocessable image or "
+                    "document that caused the API to reject every request. "
+                    "The session has been reset to recover. The conversation "
+                    "context was lost — please re-state your request."
+                )
+                # Clear sdk_session_id so next turn creates a fresh CLI
+                await self.db.update_session_fields(
+                    session_id, {"sdk_session_id": None},
+                )
+
+            await broadcaster.broadcast_error(session_id, error_msg)
             # Memorize before discarding client
             await self._memorize_session(session_id)
             # Clear resume — CLI state may be corrupted after error
             unregister_handler(session_id)
             client = self.sessions.remove_client(session_id)
-            await self.sessions.mark_error(session_id, str(e))
+            await self.sessions.mark_error(session_id, error_msg)
             if client:
                 await self._safe_disconnect(client)
             full_response_text = error_msg

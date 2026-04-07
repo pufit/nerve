@@ -401,6 +401,9 @@ class TestBootstrapProxy:
             "NERVE_USE_PROXY": "1",
             "NERVE_MODE": "personal",
             "NERVE_WORKSPACE": str(tmp_path / "ws"),
+            # Explicitly clear auth vars so host environment doesn't leak through
+            "ANTHROPIC_API_KEY": "",
+            "CLAUDE_CODE_OAUTH_TOKEN": "",
         }
         with patch.dict(os.environ, env, clear=False):
             choices = run_non_interactive(tmp_path)

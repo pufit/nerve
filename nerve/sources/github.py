@@ -275,9 +275,15 @@ class GitHubSource(Source):
         if not isinstance(reviews_data, list) or not reviews_data:
             return
 
+        # Filter out PENDING (draft) reviews — they have submitted_at=null
+        # which would crash max() when comparing str with None.
+        submitted = [r for r in reviews_data if r.get("state") != "PENDING"]
+        if not submitted:
+            return
+
         latest_review = max(
-            reviews_data,
-            key=lambda r: r.get("submitted_at", ""),
+            submitted,
+            key=lambda r: r.get("submitted_at") or "",
         )
         review_state = latest_review.get("state", "")
         result["latest_review"] = {

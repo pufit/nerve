@@ -3,8 +3,10 @@
 Cursor semantics: ISO 8601 timestamp of the newest notification's `updated_at`.
 On first run (no cursor), fetches from the last 24 hours.
 
-Each notification is enriched with actual content from the subject (PR/issue)
-and, when available, the latest comment that triggered the notification.
+Each notification is enriched with actual content from the subject (PR/issue),
+the latest comment that triggered the notification, and for PRs the latest
+review state (APPROVED, CHANGES_REQUESTED, etc.) plus any inline review
+comments attached to specific code lines.
 """
 
 from __future__ import annotations
@@ -135,6 +137,35 @@ class GitHubSource(Source):
                         f"{comment_body}"
                     )
 
+                # Add latest review state (APPROVED, CHANGES_REQUESTED, etc.)
+                latest_review = extra.get("latest_review")
+                if latest_review:
+                    reviewer = latest_review.get("user", "?")
+                    review_state = latest_review.get("state", "")
+                    review_body = latest_review.get("body", "")
+                    content_parts.append(
+                        f"\n--- Latest Review ({reviewer}) ---\n"
+                        f"State: {review_state}"
+                    )
+                    if review_body:
+                        content_parts.append(
+                            review_body[:_MAX_COMMENT_CHARS]
+                        )
+
+                # Add inline review comments (code-level feedback)
+                inline_comments = extra.get("review_inline_comments", [])
+                if inline_comments:
+                    content_parts.append("\n--- Inline Review Comments ---")
+                    for ic in inline_comments:
+                        ic_user = ic.get("user", "?")
+                        ic_path = ic.get("path", "")
+                        ic_line = ic.get("line")
+                        ic_body = ic.get("body", "")
+                        loc = f"{ic_path}:{ic_line}" if ic_line else ic_path
+                        content_parts.append(
+                            f"\n{ic_user} on {loc}:\n{ic_body}"
+                        )
+
                 records.append(SourceRecord(
                     id=notif.get("id", ""),
                     source="github",
@@ -215,17 +246,68 @@ class GitHubSource(Source):
             # separate comment to fetch)
             if comment_url and comment_url != subject_url:
                 comment_data = await self._gh_api_get(comment_url)
-                if comment_data:
+                if comment_data and isinstance(comment_data, dict):
                     result["latest_comment"] = {
                         "user": comment_data.get("user", {}).get("login", "?"),
                         "body": comment_data.get("body", ""),
                         "created_at": comment_data.get("created_at", ""),
                     }
 
+            # For PRs: fetch latest review state and inline comments.
+            # GitHub often sets latest_comment_url to null for review
+            # submissions, leaving the notification with no comment content.
+            # The review state (APPROVED, CHANGES_REQUESTED) and inline
+            # comments are only available via separate API endpoints.
+            if subject.get("type") == "PullRequest" and subject_url:
+                await self._enrich_pr_reviews(subject_url, result)
+
         return result
 
+    async def _enrich_pr_reviews(
+        self, pr_url: str, result: dict[str, Any],
+    ) -> None:
+        """Fetch the latest review state and inline comments for a PR.
+
+        Mutates *result* in place, adding ``latest_review`` and optionally
+        ``review_inline_comments``.
+        """
+        reviews_data = await self._gh_api_get(f"{pr_url}/reviews")
+        if not isinstance(reviews_data, list) or not reviews_data:
+            return
+
+        latest_review = max(
+            reviews_data,
+            key=lambda r: r.get("submitted_at", ""),
+        )
+        review_state = latest_review.get("state", "")
+        result["latest_review"] = {
+            "user": latest_review.get("user", {}).get("login", "?"),
+            "state": review_state,
+            "body": latest_review.get("body", ""),
+            "submitted_at": latest_review.get("submitted_at", ""),
+        }
+
+        # When the review body is empty the actual feedback lives in
+        # inline comments attached to specific code lines.
+        review_id = latest_review.get("id")
+        if review_id and not latest_review.get("body"):
+            rc_data = await self._gh_api_get(
+                f"{pr_url}/reviews/{review_id}/comments",
+            )
+            if isinstance(rc_data, list) and rc_data:
+                result["review_inline_comments"] = [
+                    {
+                        "user": rc.get("user", {}).get("login", "?"),
+                        "body": (rc.get("body", "") or "")[:_MAX_COMMENT_CHARS],
+                        "path": rc.get("path", ""),
+                        "line": rc.get("line"),
+                        "created_at": rc.get("created_at", ""),
+                    }
+                    for rc in rc_data[:5]  # cap to keep payload reasonable
+                ]
+
     @staticmethod
-    async def _gh_api_get(url: str, timeout: float = 30) -> dict | None:
+    async def _gh_api_get(url: str, timeout: float = 30) -> dict | list | None:
         """Call gh api with a full URL, return parsed JSON or None."""
         try:
             proc = await asyncio.create_subprocess_exec(

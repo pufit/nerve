@@ -166,6 +166,21 @@ class GitHubSource(Source):
                             f"\n{ic_user} on {loc}:\n{ic_body}"
                         )
 
+                # Add recent human comments (catches mentions buried by
+                # bot comments — see _enrich_recent_comments).
+                recent_comments = extra.get("recent_comments", [])
+                if recent_comments:
+                    content_parts.append(
+                        "\n--- Recent Comments (human, newest first) ---"
+                    )
+                    for rc in recent_comments:
+                        rc_user = rc.get("user", "?")
+                        rc_date = rc.get("created_at", "")
+                        rc_body = rc.get("body", "")
+                        content_parts.append(
+                            f"\n{rc_user} ({rc_date}):\n{rc_body}"
+                        )
+
                 records.append(SourceRecord(
                     id=notif.get("id", ""),
                     source="github",
@@ -261,6 +276,15 @@ class GitHubSource(Source):
             if subject.get("type") == "PullRequest" and subject_url:
                 await self._enrich_pr_reviews(subject_url, result)
 
+            # Fetch recent human comments to catch mentions buried by bot
+            # comments.  GitHub's latest_comment_url always points to the
+            # most recent comment — when a bot (e.g. clickhouse-gh[bot])
+            # posts after a human @mention, the mention is lost.
+            reason = notif.get("reason", "")
+            s_type = subject.get("type", "")
+            if reason in ("mention", "assign", "review_requested", "team_mention") and s_type in ("PullRequest", "Issue"):
+                await self._enrich_recent_comments(subject_url, s_type, result)
+
         return result
 
     async def _enrich_pr_reviews(
@@ -311,6 +335,66 @@ class GitHubSource(Source):
                     }
                     for rc in rc_data[:5]  # cap to keep payload reasonable
                 ]
+
+    async def _enrich_recent_comments(
+        self, subject_url: str, subject_type: str, result: dict[str, Any],
+    ) -> None:
+        """Fetch recent human comments for a PR/issue notification.
+
+        GitHub's ``latest_comment_url`` points to the *most recent* comment,
+        which is often a bot (CI coverage, AI review, merge conflict warning).
+        When a human @mentions us and then a bot comments seconds later, the
+        mention is buried and never appears in the enriched content.
+
+        This method fetches the last few issue-level comments, filters out
+        bots, and attaches human comments that are missing from the
+        already-fetched ``latest_comment``.  It ensures the actual triggering
+        comment is always available to downstream consumers.
+        """
+        # PR issue-comments live under /issues/{n}/comments, not /pulls/
+        if subject_type == "PullRequest":
+            comments_url = subject_url.replace("/pulls/", "/issues/") + "/comments"
+        else:
+            comments_url = subject_url + "/comments"
+
+        # Fetch last 10 comments (newest first) — enough to find the mention
+        # even if several bots posted afterwards.
+        comments_data = await self._gh_api_get(
+            f"{comments_url}?per_page=10&sort=created&direction=desc",
+        )
+        if not isinstance(comments_data, list) or not comments_data:
+            return
+
+        # Deduplicate against the latest_comment already in result
+        existing = result.get("latest_comment") or {}
+        existing_key = (existing.get("user", ""), existing.get("created_at", ""))
+
+        recent_human: list[dict[str, str]] = []
+        for c in comments_data:
+            user = c.get("user", {}).get("login", "")
+            body = (c.get("body", "") or "")
+            created = c.get("created_at", "")
+
+            # Skip bots
+            if user.endswith("[bot]") or user.endswith("-bot"):
+                continue
+
+            # Skip if identical to the already-fetched latest_comment
+            if (user, created) == existing_key:
+                continue
+
+            recent_human.append({
+                "user": user,
+                "body": body[:_MAX_COMMENT_CHARS],
+                "created_at": created,
+            })
+
+            # Cap at 5 human comments — enough context without bloat
+            if len(recent_human) >= 5:
+                break
+
+        if recent_human:
+            result["recent_comments"] = recent_human
 
     @staticmethod
     async def _gh_api_get(url: str, timeout: float = 30) -> dict | list | None:

@@ -81,9 +81,9 @@ def _done_dir() -> Path:
 
 @tool(
     "task_search",
-    "Search tasks by keyword in title. Returns matching tasks. Use this before creating tasks to check for duplicates.",
+    "Search tasks by keyword in title, content, tags, or slug. Supports partial words and task ID lookup. Returns matching tasks ranked by relevance. Use this before creating tasks to check for duplicates.",
     {
-        "query": {"type": "string", "description": "Search keyword(s) to match in task titles"},
+        "query": {"type": "string", "description": "Search keyword(s), partial words, or task ID/slug to match against title, content, tags, and task ID"},
         "status": {"type": "string", "description": "Filter: 'all' (include done), specific status, or empty (open tasks only)", "default": ""},
         "tag": {"type": "string", "description": "Filter by tag name (exact match)", "default": ""},
     },
@@ -308,7 +308,7 @@ async def task_update(args: dict) -> dict:
                 if new_title:
                     # Replace the H1 heading (first line starting with #)
                     content = _re.sub(r"^# .+", f"# {new_title}", content, count=1)
-                    # Sync title to SQLite
+                    # Sync title to SQLite — pass content to preserve FTS index
                     await _db.upsert_task(
                         task_id=task_id,
                         file_path=task["file_path"],
@@ -318,6 +318,7 @@ async def task_update(args: dict) -> dict:
                         source_url=task.get("source_url"),
                         deadline=deadline or task.get("deadline"),
                         tags=new_tags_str if raw_tags else (task.get("tags") or ""),
+                        content=content,
                     )
                 if note:
                     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")

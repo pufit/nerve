@@ -454,13 +454,18 @@ class TestTaskSearch:
         assert len(results) == 1
 
     async def test_rebuild_fts(self, db: Database):
-        await self._create_task(db, "t1", "Some task")
+        await self._create_task(db, "t1", "Some task", content="secret keyword xyzzy")
+        # Content-only word is findable via FTS
+        results = await db.search_tasks("xyzzy")
+        assert len(results) == 1
+        # Rebuild clears the FTS index
+        await db.rebuild_fts()
+        # Content-only word no longer found (not in title or slug)
+        results = await db.search_tasks("xyzzy")
+        assert len(results) == 0
+        # But title LIKE fallback still works
         results = await db.search_tasks("task")
         assert len(results) == 1
-        # Rebuild clears the index
-        await db.rebuild_fts()
-        results = await db.search_tasks("task")
-        assert len(results) == 0
 
     async def test_build_fts_query_sanitizes_special_chars(self, db: Database):
         """FTS5 special characters should be stripped, not cause errors."""
@@ -479,6 +484,51 @@ class TestTaskSearch:
         assert len(results) == 0
         results = await db.search_tasks("   ")
         assert len(results) == 0
+
+    async def test_search_prefix_matching(self, db: Database):
+        """Partial word should match via FTS5 prefix syntax."""
+        await self._create_task(db, "t1", "Distribution documentation update")
+        results = await db.search_tasks("distrib")
+        assert len(results) == 1
+        assert results[0]["id"] == "t1"
+
+    async def test_search_by_exact_task_id(self, db: Database):
+        """Exact task ID should be found."""
+        await self._create_task(db, "2026-03-10-distribution-docs", "Distribution documentation")
+        results = await db.search_tasks("2026-03-10-distribution-docs")
+        assert len(results) == 1
+        assert results[0]["id"] == "2026-03-10-distribution-docs"
+
+    async def test_search_by_slug_substring(self, db: Database):
+        """Partial slug should find the task."""
+        await self._create_task(db, "2026-03-10-azure-migration", "Azure eastus to centralus")
+        results = await db.search_tasks("azure-migration")
+        assert len(results) == 1
+        assert results[0]["id"] == "2026-03-10-azure-migration"
+
+    async def test_search_slug_words_via_fts(self, db: Database):
+        """Words from the slug should be searchable via FTS."""
+        await self._create_task(db, "2026-04-01-payment-failures", "Google billing issue")
+        # "payment" is only in the slug, not the title
+        results = await db.search_tasks("payment")
+        assert len(results) == 1
+
+    async def test_search_deduplicates_across_strategies(self, db: Database):
+        """A task matching multiple strategies should appear only once."""
+        await self._create_task(db, "billing-fix", "Fix billing issue", content="billing problem")
+        results = await db.search_tasks("billing")
+        assert len(results) == 1
+
+    async def test_search_relevance_ordering(self, db: Database):
+        """FTS matches should rank higher than LIKE-only matches."""
+        # Task with exact FTS match on title
+        await self._create_task(db, "t1", "Optimize database queries")
+        # Task where "optim" only matches via slug LIKE
+        await self._create_task(db, "2026-01-01-optimize-cache", "Cache layer improvements")
+        results = await db.search_tasks("optimize", status="all")
+        assert len(results) == 2
+        # FTS match (t1 has "Optimize" in title) should come first
+        assert results[0]["id"] == "t1"
 
 
 # --- Consumer Cursors ---

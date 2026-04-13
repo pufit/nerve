@@ -94,7 +94,7 @@ async def task_search(args: dict) -> dict:
 
     if raw_status in ("", "open", "active"):
         status = None  # all non-done
-    elif raw_status == "all":
+    elif raw_status in ("all", "any"):
         status = "all"
     else:
         status = raw_status  # specific: pending, in_progress, done, deferred
@@ -216,7 +216,7 @@ async def task_create(args: dict) -> dict:
     {
         "status": {"type": "string", "description": "Filter: 'pending', 'in_progress', 'done', 'deferred', 'open' (all non-done), or 'all' (everything). Default (empty) = all non-done.", "default": ""},
         "tag": {"type": "string", "description": "Filter by tag name (exact match)", "default": ""},
-        "limit": {"type": "number", "description": "Max results", "default": 20},
+        "limit": {"type": "number", "description": "Max results (default 100)", "default": 100},
     },
 )
 async def task_list(args: dict) -> dict:
@@ -224,13 +224,13 @@ async def task_list(args: dict) -> dict:
 
     if raw_status in ("", "open", "active"):
         status = None  # all non-done
-    elif raw_status == "all":
+    elif raw_status in ("all", "any"):
         status = "all"  # everything including done
     else:
         status = raw_status  # specific: pending, in_progress, done, deferred
 
     tag = (args.get("tag", "") or "").strip().lower()
-    limit = int(args.get("limit", 20))
+    limit = int(args.get("limit", 100))
 
     if _db:
         tasks = await _db.list_tasks(status=status, tag=tag or None, limit=limit)

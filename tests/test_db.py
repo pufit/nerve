@@ -530,6 +530,83 @@ class TestTaskSearch:
         # FTS match (t1 has "Optimize" in title) should come first
         assert results[0]["id"] == "t1"
 
+    async def test_search_by_tag(self, db: Database):
+        """Tags should be searchable via FTS."""
+        await db.upsert_task(
+            task_id="tagged-task", file_path="memory/tasks/active/tagged-task.md",
+            title="Some CI issue", status="pending", tags="p0,fuzzer,trunk-bug",
+            content="test content",
+        )
+        results = await db.search_tasks("fuzzer")
+        assert len(results) == 1
+        assert results[0]["id"] == "tagged-task"
+
+    async def test_list_tasks_tag_filter(self, db: Database):
+        """Tag filter should match exact tags in comma-separated list."""
+        await db.upsert_task(
+            task_id="t-p0", file_path="f1.md", title="P0 task",
+            status="pending", tags="p0,ci",
+        )
+        await db.upsert_task(
+            task_id="t-p2", file_path="f2.md", title="P2 task",
+            status="pending", tags="p2,ci",
+        )
+        results = await db.list_tasks(tag="p0")
+        assert len(results) == 1
+        assert results[0]["id"] == "t-p0"
+
+        # Both have "ci" tag
+        results = await db.list_tasks(tag="ci")
+        assert len(results) == 2
+
+
+class TestTagParsing:
+    """Test tag string parsing handles various agent input formats."""
+
+    def test_normal_csv(self):
+        from nerve.tasks.models import parse_tags_string
+        assert parse_tags_string("ci,fuzzer,p0") == ["ci", "fuzzer", "p0"]
+
+    def test_json_array(self):
+        from nerve.tasks.models import parse_tags_string
+        assert parse_tags_string('["ci","fuzzer","p0"]') == ["ci", "fuzzer", "p0"]
+
+    def test_empty_json_array(self):
+        from nerve.tasks.models import parse_tags_string
+        assert parse_tags_string("[]") == []
+
+    def test_malformed_json_fragments(self):
+        from nerve.tasks.models import parse_tags_string
+        result = parse_tags_string('"fuzzer","p0","trunk-bug"],["ci"')
+        assert "ci" in result
+        assert "fuzzer" in result
+        assert "p0" in result
+        assert "trunk-bug" in result
+        # No brackets or quotes in any tag
+        for tag in result:
+            assert "[" not in tag and "]" not in tag and '"' not in tag
+
+    def test_quoted_csv(self):
+        from nerve.tasks.models import parse_tags_string
+        assert parse_tags_string('"ci","p0"') == ["ci", "p0"]
+
+    def test_empty_string(self):
+        from nerve.tasks.models import parse_tags_string
+        assert parse_tags_string("") == []
+
+    def test_tags_to_string_accepts_string(self):
+        from nerve.tasks.models import tags_to_string
+        assert tags_to_string('["ci","p0"]') == "ci,p0"
+
+    def test_tags_to_string_accepts_list(self):
+        from nerve.tasks.models import tags_to_string
+        assert tags_to_string(["P0", "ci", "Fuzzer"]) == "ci,fuzzer,p0"
+
+    def test_roundtrip(self):
+        from nerve.tasks.models import parse_tags_string, tags_to_string
+        original = "ci,fuzzer,p0,trunk-bug"
+        assert tags_to_string(parse_tags_string(original)) == original
+
 
 # --- Consumer Cursors ---
 

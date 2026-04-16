@@ -105,7 +105,7 @@ class AgentConfig:
     max_turns: int = 100
     max_concurrent: int = 4
     thinking: str = "max"       # max, high, medium, low, disabled, adaptive, or number (budget_tokens)
-    effort: str = "max"         # max, high, medium, low
+    effort: str = "max"         # max, xhigh, high, medium, low
     context_1m: bool = True     # Enable 1M context window beta
 
     @classmethod

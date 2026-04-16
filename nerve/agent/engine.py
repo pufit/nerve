@@ -738,7 +738,7 @@ class AgentEngine:
         thinking_config = self._parse_thinking_config(self.config.agent.thinking)
         effort = (
             self.config.agent.effort
-            if self.config.agent.effort in ("low", "medium", "high", "max")
+            if self.config.agent.effort in ("low", "medium", "high", "xhigh", "max")
             else None
         )
         betas = (

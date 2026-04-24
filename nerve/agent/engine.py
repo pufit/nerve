@@ -739,10 +739,9 @@ class AgentEngine:
             self.config.agent.thinking,
             model or self.config.agent.model,
         )
-        effort = (
-            self.config.agent.effort
-            if self.config.agent.effort in ("low", "medium", "high", "xhigh", "max")
-            else None
+        effort = self._effective_effort(
+            self.config.agent.effort,
+            model or self.config.agent.model,
         )
         betas = (
             ["context-1m-2025-08-07"] if self.config.agent.context_1m else []
@@ -957,6 +956,40 @@ class AgentEngine:
         except ValueError:
             logger.warning("Unknown thinking config '%s', using adaptive", value)
             return {"type": "adaptive"}
+
+    # Adaptive-thinking effort levels accepted per Claude model.
+    # Sonnet/Haiku tiers top out at "high"; only Opus advertises xhigh/max.
+    # Kept in sync with Anthropic model capabilities and the CLIProxyAPI
+    # registry (internal/registry/models/models.json).
+    _MODEL_EFFORT_LEVELS: dict[str, tuple[str, ...]] = {
+        "claude-opus-4-7": ("low", "medium", "high", "xhigh", "max"),
+        "claude-opus-4-6": ("low", "medium", "high", "max"),
+        "claude-sonnet-4-6": ("low", "medium", "high"),
+    }
+    _EFFORT_RANK: tuple[str, ...] = ("low", "medium", "high", "xhigh", "max")
+
+    @staticmethod
+    def _effective_effort(value: str, model: str | None) -> str | None:
+        """Return the effort level to send to the SDK, capped to what ``model`` supports.
+
+        Global ``agent.effort`` (e.g. ``"max"``) is shared across the main agent
+        and auxiliary models (``cron_model``, memU recall/memorize). Tiers below
+        Opus cap at ``"high"``, so forwarding ``max`` unmodified triggers a 400
+        from the upstream (or from CLIProxyAPI's tier validation). This caps
+        to the highest level the target model advertises.
+        """
+        if value not in AgentEngine._EFFORT_RANK:
+            return None
+        allowed = AgentEngine._MODEL_EFFORT_LEVELS.get(model or "")
+        if not allowed:
+            return value
+        if value in allowed:
+            return value
+        requested_rank = AgentEngine._EFFORT_RANK.index(value)
+        for level in reversed(AgentEngine._EFFORT_RANK[: requested_rank + 1]):
+            if level in allowed:
+                return level
+        return None
 
     # ------------------------------------------------------------------ #
     #  SDK client lifecycle                                                #

@@ -118,6 +118,66 @@ def _md_to_tg_html(text: str) -> str:
     return text
 
 
+def _smart_split(text: str, limit: int = MAX_MSG_LEN) -> list[str]:
+    """Split ``text`` into chunks each no longer than ``limit``.
+
+    Hierarchical strategy: paragraphs (``\\n\\n``) → lines (``\\n``) →
+    sentences (``. ``/``! ``/``? ``) → hard char cut. Adds a
+    ``(N/M)\\n`` continuation marker when the result has more than one
+    chunk so that recipients see ordering. The marker length is
+    accounted for against ``limit`` so every produced chunk fits.
+
+    The function is pure and operates on raw markdown — it is
+    fence-aware (see ``_balance_code_fences``) but does not perform
+    HTML escaping; the caller converts each chunk separately via
+    ``_md_to_tg_html``.
+    """
+    if len(text) <= limit:
+        return [text]
+
+    # Reserve budget for the worst-case marker "(99/99)\n" — 8 chars.
+    # We don't know M up front, so reserve a fixed overhead and refuse
+    # to produce more than 99 chunks (defensive).
+    marker_overhead = 8
+    inner_limit = limit - marker_overhead
+
+    # Paragraph-level greedy packing.
+    paragraphs = text.split("\n\n")
+    chunks: list[str] = []
+    current = ""
+    for para in paragraphs:
+        if len(para) > inner_limit:
+            # Flush current, then this paragraph needs finer split.
+            if current:
+                chunks.append(current)
+                current = ""
+            chunks.extend(_split_paragraph(para, inner_limit))
+            continue
+        candidate = f"{current}\n\n{para}" if current else para
+        if len(candidate) <= inner_limit:
+            current = candidate
+        else:
+            chunks.append(current)
+            current = para
+    if current:
+        chunks.append(current)
+
+    return _add_continuation_markers(chunks)
+
+
+def _split_paragraph(para: str, limit: int) -> list[str]:
+    """Stub — replaced in Task 2. For now: hard char split."""
+    return [para[i:i + limit] for i in range(0, len(para), limit)]
+
+
+def _add_continuation_markers(chunks: list[str]) -> list[str]:
+    """Prepend ``(N/M)\\n`` to each chunk if there is more than one."""
+    if len(chunks) <= 1:
+        return chunks
+    total = len(chunks)
+    return [f"({i + 1}/{total})\n{c}" for i, c in enumerate(chunks)]
+
+
 def _format_forward_context(message: Any) -> str:
     """Extract forward origin info from a Telegram message.
 

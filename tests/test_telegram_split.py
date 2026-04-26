@@ -108,3 +108,19 @@ def test_code_fence_with_language_tag_reopens_with_same_tag():
         assert second_body.startswith("```python\n"), (
             f"expected reopened ```python fence, got: {second_body[:80]!r}"
         )
+
+
+def test_format_response_no_longer_truncates():
+    """Regression: format_response must not silently drop the tail."""
+    from nerve.channels.telegram import TelegramChannel
+    from nerve.config import NerveConfig
+
+    cfg = NerveConfig.__new__(NerveConfig)  # bypass __init__; we only need format_response
+    channel = TelegramChannel.__new__(TelegramChannel)
+    channel._config = cfg
+
+    long_text = "a" * 10000
+    out = channel.format_response(long_text)
+    # No "(truncated)" suffix; full payload preserved.
+    assert "(truncated)" not in out
+    assert out == long_text

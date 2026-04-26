@@ -637,9 +637,9 @@ class TelegramChannel(BaseChannel):
             return
         chat_id = int(message.target)
         text = message.text
-        # Split long messages
-        for i in range(0, len(text), MAX_MSG_LEN):
-            chunk = text[i:i + MAX_MSG_LEN]
+        # Smart-split long messages (fence-aware, hierarchical).
+        chunks = _smart_split(text, limit=MAX_MSG_LEN)
+        for chunk in chunks:
             html_chunk = _md_to_tg_html(chunk)
             try:
                 sent = await self._app.bot.send_message(
@@ -653,11 +653,17 @@ class TelegramChannel(BaseChannel):
                     text=chunk,
                 )
             self._cache_message(sent.message_id, chat_id, chunk)
+            # Throttle to respect Telegram's 1 msg/sec/chat limit.
+            if len(chunks) > 1:
+                await asyncio.sleep(0.1)
 
     def format_response(self, text: str) -> str:
-        """Truncate for Telegram if needed."""
-        if len(text) > MAX_MSG_LEN:
-            return text[:MAX_MSG_LEN - 20] + "\n\n... (truncated)"
+        """Identity for Telegram — actual chunking happens in :meth:`send`.
+
+        Telegram messages are capped at 4096 chars; long responses are
+        split chunk-by-chunk inside ``send`` via ``_smart_split`` so we
+        do not lose the tail.
+        """
         return text
 
     # ------------------------------------------------------------------ #

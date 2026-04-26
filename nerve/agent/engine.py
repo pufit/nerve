@@ -240,9 +240,24 @@ class AgentEngine:
         self._skill_manager: SkillManager | None = None
         self._memorize_lock = asyncio.Lock()
         self._session_locks: dict[str, asyncio.Lock] = {}
+        # Tracks which channel a session is currently running on. Set at
+        # the start of run() / _run_inner and cleared on exit. Used by
+        # session-scoped tools (e.g. send_file) to dispatch to the
+        # current channel rather than relying on stale router context.
+        self._active_channel: dict[str, str] = {}
         self._router = None  # ChannelRouter — lazy-initialized via .router property
         self._mcp_servers_cache = list(config.mcp_servers)  # hot-reloadable
         self._claude_code_plugins: list[dict[str, str]] = []  # plugin dirs
+
+    def get_active_channel(self, session_id: str) -> str | None:
+        """Return the channel name currently driving ``session_id`` (if any).
+
+        Set by ``run()`` when a ``channel`` argument is supplied; cleared
+        on exit. Used by session-scoped tools to dispatch outbound
+        actions (e.g. ``send_file``) to the correct channel without
+        relying on potentially stale router context.
+        """
+        return self._active_channel.get(session_id)
 
     async def initialize(self) -> None:
         """Initialize the agent engine — set up tools and main session."""
@@ -1340,6 +1355,11 @@ class AgentEngine:
                 # mark_running below.
                 self.sessions.pop_stop_request(session_id)
                 self.sessions.mark_running(session_id)
+                # Track active channel for session-scoped tools (send_file
+                # uses this to avoid dispatching to a stale router context
+                # from a prior inbound channel).
+                if channel is not None:
+                    self._active_channel[session_id] = channel
                 # Notify all connected clients that this session started running
                 await broadcaster.broadcast("__global__", {
                     "type": "session_running",
@@ -1354,6 +1374,7 @@ class AgentEngine:
                     )
                 finally:
                     self.sessions.mark_not_running(session_id)
+                    self._active_channel.pop(session_id, None)
                     broadcaster.stop_buffering(session_id)
                     # Notify all connected clients that this session stopped
                     await broadcaster.broadcast("__global__", {

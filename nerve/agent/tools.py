@@ -1742,6 +1742,66 @@ async def _send_sticker_impl(args: dict, session_id: str) -> dict:
         return {"content": [{"type": "text", "text": f"Failed to send sticker: {e}"}]}
 
 
+async def _send_file_impl(args: dict, session_id: str) -> dict:
+    """Core implementation for the send_file tool.
+
+    Delivers the file via the channel router (Telegram → send_document, etc.).
+    Falls back to a web-panel message when the bound channel cannot deliver
+    files natively. The web frontend renders the persisted tool_call block
+    as a SendFileBlock card regardless of native delivery.
+    """
+    file_path = args.get("file_path", "")
+    if not file_path:
+        return {"content": [{"type": "text", "text": "Error: file_path is required."}]}
+
+    resolved = Path(file_path).resolve()
+    if not resolved.exists() or not resolved.is_file():
+        return {"content": [{"type": "text", "text": f"Error: file not found: {file_path}"}]}
+
+    # Security: must be within workspace.
+    # Use path-aware containment (``Path.is_relative_to``) instead of a
+    # string prefix check — string prefix lets sibling-prefix paths
+    # bypass the guard (e.g. workspace ``/srv/ws`` would incorrectly
+    # accept ``/srv/ws-evil/secret.txt``). Now that send_file performs
+    # real channel delivery, that gap is exfiltration-capable.
+    if _workspace:
+        try:
+            resolved.relative_to(_workspace.resolve())
+        except ValueError:
+            return {"content": [{"type": "text", "text": "Error: file must be within the workspace."}]}
+
+    filename = resolved.name
+    file_size = resolved.stat().st_size
+
+    delivered = False
+    if _engine is not None:
+        try:
+            # Pass the active channel so the router does NOT fall back to
+            # ``_message_context`` when the entry is stale (e.g. a session
+            # that previously received a Telegram message and is now
+            # being driven by a web prompt — without this, the file would
+            # leak to the Telegram chat instead of the current requester).
+            active_channel = _engine.get_active_channel(session_id)
+            delivered = await _engine.router.send_file(
+                session_id, str(resolved), channel=active_channel,
+            )
+        except Exception as e:
+            logger.error("send_file dispatch failed: %s", e)
+            delivered = False
+
+    if delivered:
+        return {"content": [{"type": "text", "text": f"Sent file: {filename} ({file_size:,} bytes)"}]}
+
+    # Channels without SEND_FILES (or no message context, e.g. cron sessions)
+    # still get the persisted tool_call block — the web SendFileBlock renders
+    # it as a download card. Be explicit about the fallback so the agent can
+    # phrase its acknowledgement correctly on text-only channels.
+    return {"content": [{"type": "text", "text": (
+        f"File ready: {filename} ({file_size:,} bytes). "
+        "Native delivery not available on this channel — open the web panel to download."
+    )}]}
+
+
 _nerve_asgi_app = None  # Cached mini FastAPI app for in-process API calls
 
 
@@ -2188,29 +2248,12 @@ def create_session_mcp_server(session_id: str):
     @tool(
         "send_file",
         "Send a file to the user as a downloadable attachment in the chat. "
-        "The file will appear inline as a download card. Use this when the user asks "
-        "you to share, export, or send them a file.",
+        "On Telegram the file is delivered as a document; on the web panel it appears as an inline "
+        "download card. Use this when the user asks you to share, export, or send them a file.",
         _SEND_FILE_SCHEMA,
     )
     async def session_send_file(args: dict) -> dict:
-        file_path = args.get("file_path", "")
-        if not file_path:
-            return {"content": [{"type": "text", "text": "Error: file_path is required."}]}
-
-        resolved = Path(file_path).resolve()
-        if not resolved.exists() or not resolved.is_file():
-            return {"content": [{"type": "text", "text": f"Error: file not found: {file_path}"}]}
-
-        # Security: must be within workspace
-        if _workspace and not str(resolved).startswith(str(_workspace.resolve())):
-            return {"content": [{"type": "text", "text": "Error: file must be within the workspace."}]}
-
-        filename = resolved.name
-        file_size = resolved.stat().st_size
-
-        # The tool_call block persists in DB — frontend renders it
-        # as an inline download card via SendFileBlock.
-        return {"content": [{"type": "text", "text": f"Sent file: {filename} ({file_size:,} bytes)"}]}
+        return await _send_file_impl(args, session_id)
 
     # Shared tools (don't need session context) + session-scoped tools
     shared_tools = [t for t in ALL_TOOLS if t.name not in ("notify", "ask_user", "react", "send_sticker", "plan_propose")]

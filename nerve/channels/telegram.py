@@ -246,6 +246,7 @@ class TelegramChannel(BaseChannel):
             | ChannelCapability.MARKDOWN
             | ChannelCapability.TYPING_INDICATOR
             | ChannelCapability.REACTIONS
+            | ChannelCapability.SEND_FILES
         )
         if self.config.telegram.stream_mode == "partial":
             caps |= ChannelCapability.STREAMING
@@ -610,6 +611,48 @@ class TelegramChannel(BaseChannel):
             chat_id=int(target),
             sticker=sticker,
         )
+
+    # ------------------------------------------------------------------ #
+    #  Files: deliver a workspace file as a Telegram document             #
+    # ------------------------------------------------------------------ #
+
+    # Telegram bot API limit for documents uploaded by bots: 50 MiB.
+    _DOCUMENT_SIZE_LIMIT = 50 * 1024 * 1024
+
+    async def send_file(self, target: str, file_path: str) -> bool:
+        """Deliver a file to a Telegram chat as a document attachment."""
+        if self._app is None:
+            return False
+        from pathlib import Path
+        try:
+            resolved = Path(file_path).resolve()
+        except (OSError, RuntimeError) as e:
+            logger.warning("send_file: failed to resolve %s: %s", file_path, e)
+            return False
+        if not resolved.exists() or not resolved.is_file():
+            return False
+        try:
+            size = resolved.stat().st_size
+        except OSError as e:
+            logger.warning("send_file: stat failed for %s: %s", resolved, e)
+            return False
+        if size > self._DOCUMENT_SIZE_LIMIT:
+            logger.warning(
+                "send_file: %s exceeds Telegram %d-byte document limit (%d bytes)",
+                resolved, self._DOCUMENT_SIZE_LIMIT, size,
+            )
+            return False
+        try:
+            with open(resolved, "rb") as f:
+                await self._app.bot.send_document(
+                    chat_id=int(target),
+                    document=f,
+                    filename=resolved.name,
+                )
+            return True
+        except Exception as e:
+            logger.warning("send_file: send_document failed for %s: %s", target, e)
+            return False
 
     # ------------------------------------------------------------------ #
     #  Message cache (for reaction context)                                #

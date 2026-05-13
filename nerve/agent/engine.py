@@ -1092,6 +1092,39 @@ class AgentEngine:
             return True
         return process.returncode is not None
 
+    def _sdk_resume_file_exists(self, sdk_session_id: str) -> bool:
+        """Check whether Claude Code still has the conversation .jsonl
+        for the given SDK session ID on this filesystem.
+
+        The CLI stores history at::
+
+            ~/.claude/projects/<encoded-cwd>/<sdk_session_id>.jsonl
+
+        where <encoded-cwd> is the absolute cwd path with every '/'
+        replaced by '-'.  If the file is gone (typically because the
+        container's /root/.claude was not bind-mounted and got wiped on
+        restart), passing --resume to the CLI fails with exit 1.
+
+        Best-effort check: any unexpected error returns True so we still
+        attempt the resume and let the CLI surface the real error,
+        rather than masking unrelated bugs.
+        """
+        try:
+            cwd = str(self.config.workspace)
+            encoded = cwd.replace("/", "-")
+            jsonl = (
+                os.path.expanduser("~/.claude/projects")
+                + "/" + encoded
+                + "/" + sdk_session_id + ".jsonl"
+            )
+            return os.path.isfile(jsonl)
+        except Exception as e:
+            logger.debug(
+                "Could not stat resume jsonl for %s: %s, assuming present",
+                sdk_session_id[:12], e,
+            )
+            return True
+
     async def _get_or_create_client(
         self, session_id: str, source: str, model: str | None,
         fork_from: str | None = None,
@@ -1129,6 +1162,33 @@ class AgentEngine:
             # For forks, use the source session's SDK ID
             if fork_from and not sdk_resume_id:
                 sdk_resume_id = fork_from
+
+            # Defensive: verify the resume target's conversation .jsonl
+            # actually exists before passing it to the CLI.  Claude Code
+            # stores conversation history in /root/.claude/projects/
+            # <encoded-cwd>/<sdk_session_id>.jsonl.  If that directory is
+            # not bind-mounted from the host, a container restart wipes
+            # the .jsonl files but the Nerve DB still holds the stale
+            # sdk_session_id; the CLI dies with "No conversation
+            # found with session ID" exit 1.
+            #
+            # When the file is missing, clear the stale id and start a
+            # fresh conversation rather than crashing the turn.  Forks
+            # are exempt: the source session's context lives in the
+            # source's row, and a fresh fork has nothing to recover to.
+            if sdk_resume_id and not fork_from:
+                if not self._sdk_resume_file_exists(sdk_resume_id):
+                    logger.warning(
+                        "Session %s resume target %s.jsonl is missing; "
+                        "starting a fresh CLI conversation.  This usually "
+                        "means /root/.claude was not persisted across a "
+                        "container restart.",
+                        session_id, sdk_resume_id[:12],
+                    )
+                    await self.db.update_session_fields(
+                        session_id, {"sdk_session_id": None},
+                    )
+                    sdk_resume_id = None
 
             if sdk_resume_id:
                 logger.info(

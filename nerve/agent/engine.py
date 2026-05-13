@@ -1427,6 +1427,11 @@ class AgentEngine:
                 self.sessions.mark_running(session_id)
                 if channel is not None:
                     self._active_channel[session_id] = channel
+                # Mark the turn as in flight so the finally below can
+                # detect "ended without sending done/stopped/error" and
+                # ship a synthetic done.  Clearing happens automatically
+                # when a terminal event is broadcast.
+                broadcaster.mark_turn_open(session_id)
                 # Notify all connected clients that this session started running
                 await broadcaster.broadcast("__global__", {
                     "type": "session_running",
@@ -1442,6 +1447,28 @@ class AgentEngine:
                 finally:
                     self.sessions.mark_not_running(session_id)
                     self._active_channel.pop(session_id, None)
+                    # Backstop: if _run_inner exited without broadcasting
+                    # done/stopped/error (post-stream DB exception, hung
+                    # CLI cancelled by an outer mechanism, etc.), the
+                    # frontend never learned the turn ended and is still
+                    # showing "thinking..." even though the server has
+                    # cleared is_running.  Ship a synthetic done so the
+                    # streaming UI exits cleanly.
+                    if broadcaster.is_turn_open(session_id):
+                        logger.warning(
+                            "Session %s ended without a terminal event "
+                            "(done/stopped/error); sending synthetic done "
+                            "so the frontend exits streaming state",
+                            session_id,
+                        )
+                        try:
+                            await broadcaster.broadcast_done(session_id)
+                        except Exception as e:
+                            logger.warning(
+                                "Synthetic done broadcast failed for %s: %s",
+                                session_id, e,
+                            )
+                            broadcaster.clear_turn_open(session_id)
                     broadcaster.stop_buffering(session_id)
                     # Notify all connected clients that this session stopped
                     await broadcaster.broadcast("__global__", {

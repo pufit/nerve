@@ -1,6 +1,9 @@
 """Tests for nerve.agent.engine — pure helpers (no SDK state)."""
 
 import asyncio
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 import pytest
 
@@ -143,3 +146,58 @@ async def test_iter_response_handles_empty_stream():
         seen.append(msg)
     assert seen == []
     assert client.aclose_calls == 1
+# _sdk_resume_file_exists
+# ---------------------------------------------------------------------------
+
+def _make_engine(workspace: str = "/root/nerve-workspace") -> AgentEngine:
+    """Minimal AgentEngine stub (only config.workspace is needed)."""
+    engine = AgentEngine.__new__(AgentEngine)
+    engine.config = SimpleNamespace(workspace=Path(workspace))
+    return engine
+
+
+class TestSdkResumeFileExists:
+    def test_returns_true_when_file_present(self):
+        engine = _make_engine()
+        with patch("nerve.agent.engine.os.path.isfile", return_value=True):
+            assert engine._sdk_resume_file_exists("some-session-id") is True
+
+    def test_returns_false_when_file_missing(self):
+        engine = _make_engine()
+        with patch("nerve.agent.engine.os.path.isfile", return_value=False):
+            assert engine._sdk_resume_file_exists("some-session-id") is False
+
+    def test_fail_open_on_exception(self):
+        """Any unexpected error returns True rather than crashing the turn."""
+        engine = _make_engine()
+        with patch("nerve.agent.engine.os.path.isfile", side_effect=OSError("denied")):
+            assert engine._sdk_resume_file_exists("some-session-id") is True
+
+    def test_path_encodes_workspace_slashes(self):
+        """'/' in the workspace path are replaced with '-' in the projects subdir."""
+        engine = _make_engine("/root/nerve-workspace")
+        captured: dict = {}
+
+        def _capture(path: str) -> bool:
+            captured["path"] = path
+            return True
+
+        with patch("nerve.agent.engine.os.path.isfile", side_effect=_capture):
+            engine._sdk_resume_file_exists("sid-abc")
+
+        assert "-root-nerve-workspace" in captured["path"]
+        assert "sid-abc.jsonl" in captured["path"]
+
+    def test_path_ends_with_jsonl(self):
+        """The constructed path always ends with <session_id>.jsonl."""
+        engine = _make_engine("/workspace")
+        captured: dict = {}
+
+        def _capture(path: str) -> bool:
+            captured["path"] = path
+            return True
+
+        with patch("nerve.agent.engine.os.path.isfile", side_effect=_capture):
+            engine._sdk_resume_file_exists("myid")
+
+        assert captured["path"].endswith("myid.jsonl")

@@ -643,6 +643,110 @@ class TestTagParsing:
         assert tags_to_string(parse_tags_string(original)) == original
 
 
+# --- Plan lifecycle ---
+
+@pytest.mark.asyncio
+class TestPlanUpdate:
+    """Verify plan_update supersedes the old plan and creates a linked v+1."""
+
+    async def _setup_pending_plan(self, db: Database, tmp_path):
+        """Create a task on disk + in DB, plus a pending plan, and wire up tools."""
+        from nerve.agent import tools as tools_mod
+
+        task_id = "t-update-flow"
+        file_path = "test-task.md"
+        task_md = tmp_path / file_path
+        task_md.write_text("# Test task\n\nBody.\n", encoding="utf-8")
+
+        await db.upsert_task(
+            task_id=task_id, file_path=file_path, title="Test task",
+            status="pending", content=task_md.read_text(),
+        )
+        await db.create_plan(
+            plan_id="plan-v1", task_id=task_id, content="v1 content",
+            session_id="sess-orig", version=1, plan_type="generic",
+        )
+        # Plans default to status=pending via column DEFAULT — confirm.
+        plan = await db.get_plan("plan-v1")
+        assert plan["status"] == "pending"
+
+        # Wire tools to this DB + workspace
+        tools_mod.init_tools(workspace=tmp_path, db=db)
+        return task_id, task_md
+
+    async def test_update_supersedes_and_bumps_version(self, db: Database, tmp_path):
+        from nerve.agent.tools import plan_update
+
+        task_id, task_md = await self._setup_pending_plan(db, tmp_path)
+
+        result = await plan_update.handler({
+            "plan_id": "plan-v1",
+            "content": "v2 content with refinements",
+            "feedback": "too vague on edge cases",
+        })
+
+        # Tool result mentions the new plan
+        text = result["content"][0]["text"]
+        assert "superseded" in text
+
+        # Old plan: superseded, feedback recorded
+        old = await db.get_plan("plan-v1")
+        assert old["status"] == "superseded"
+        assert old["feedback"] == "too vague on edge cases"
+
+        # New plan: linked, v=2, fresh content, pending
+        new_plans = [p for p in await db.get_plans_for_task(task_id) if p["id"] != "plan-v1"]
+        assert len(new_plans) == 1
+        new = new_plans[0]
+        assert new["version"] == 2
+        assert new["parent_plan_id"] == "plan-v1"
+        assert new["content"] == "v2 content with refinements"
+        assert new["status"] == "pending"
+        assert new["plan_type"] == "generic"
+
+        # Task note was appended to the markdown file
+        body = task_md.read_text(encoding="utf-8")
+        assert "Plan updated: plan-v1" in body
+        assert "v2" in body
+        assert "too vague on edge cases" in body
+
+    async def test_update_refuses_non_pending_plan(self, db: Database, tmp_path):
+        from nerve.agent.tools import plan_update
+
+        _, _ = await self._setup_pending_plan(db, tmp_path)
+        await db.update_plan("plan-v1", status="declined")
+
+        result = await plan_update.handler({
+            "plan_id": "plan-v1",
+            "content": "should not apply",
+        })
+        text = result["content"][0]["text"]
+        assert "declined" in text
+        assert "only pending" in text
+
+        # No new plan was created
+        plans = await db.get_plans_for_task("t-update-flow")
+        assert len(plans) == 1
+
+    async def test_update_without_feedback_leaves_old_feedback_alone(self, db: Database, tmp_path):
+        """If no feedback is supplied, the old plan's feedback field is untouched."""
+        from nerve.agent.tools import plan_update
+
+        await self._setup_pending_plan(db, tmp_path)
+        # Pre-existing feedback on plan-v1
+        await db.update_plan("plan-v1", feedback="prior feedback")
+
+        await plan_update.handler({
+            "plan_id": "plan-v1",
+            "content": "v2 content",
+        })
+
+        old = await db.get_plan("plan-v1")
+        assert old["status"] == "superseded"
+        # The original feedback survives because we only write feedback when supplied
+        assert old["feedback"] == "prior feedback"
+
+
 # --- Diagnostics helpers ---
 
 @pytest.mark.asyncio

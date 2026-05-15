@@ -10,6 +10,12 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from nerve.agent.plan_service import (
+    PlanNotFound,
+    PlanNotPending,
+    TaskNotFound,
+    request_plan_revision,
+)
 from nerve.config import get_config
 from nerve.gateway.auth import require_auth
 from nerve.gateway.routes._deps import get_deps
@@ -89,43 +95,31 @@ async def update_plan(plan_id: str, req: PlanUpdateRequest, user: dict = Depends
 
 @router.post("/api/plans/{plan_id}/revise")
 async def revise_plan(plan_id: str, req: PlanReviseRequest, user: dict = Depends(require_auth)):
-    """Send revision feedback to the persistent planner session."""
+    """Send revision feedback to the persistent planner session.
+
+    Thin wrapper around ``request_plan_revision`` — the shared helper
+    handles validation, persistence, and dispatch. Errors are mapped to
+    HTTP status codes so the UI can surface meaningful messages instead
+    of silently dropping non-pending revision attempts.
+    """
+    if not req.feedback.strip():
+        raise HTTPException(status_code=400, detail="Feedback is required")
+
     deps = get_deps()
-    plan = await deps.db.get_plan(plan_id)
-    if not plan:
+    try:
+        result = await request_plan_revision(
+            db=deps.db,
+            engine=deps.engine,
+            plan_id=plan_id,
+            feedback=req.feedback,
+        )
+    except PlanNotFound:
         raise HTTPException(status_code=404, detail="Plan not found")
-    task = await deps.db.get_task(plan["task_id"])
-    if not task:
+    except TaskNotFound:
         raise HTTPException(status_code=404, detail="Task not found")
-
-    # Store feedback on the plan
-    await deps.db.update_plan(plan_id, feedback=req.feedback)
-
-    # Write task note
-    from nerve.agent.tools import task_update as task_update_tool
-    feedback_summary = req.feedback[:80] + "..." if len(req.feedback) > 80 else req.feedback
-    await task_update_tool.handler({
-        "task_id": plan["task_id"],
-        "note": f"Revision requested for {plan_id}: {feedback_summary}",
-    })
-
-    # Send revision request to the persistent planner session
-    feedback_prompt = (
-        f'Revise plan {plan_id} for task "{task["title"]}" based on this feedback:\n\n'
-        f"{req.feedback}\n\n"
-        f"Explore the codebase again if needed, then call "
-        f'plan_propose(task_id="{plan["task_id"]}", content="...") with the revised plan.'
-    )
-
-    session_id = plan.get("session_id") or "cron:task-planner"
-    # Ensure the session exists — route feedback to the original proposer
-    await deps.engine.sessions.get_or_create(
-        session_id, title=f"Cron: {session_id.split(':')[-1]}" if session_id.startswith("cron:") else session_id, source="cron",
-    )
-    asyncio.create_task(
-        deps.engine.run(session_id=session_id, user_message=feedback_prompt, source="cron")
-    )
-    return {"plan_id": plan_id, "status": "revision_requested"}
+    except PlanNotPending as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    return result
 
 
 @router.post("/api/plans/{plan_id}/approve")

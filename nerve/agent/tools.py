@@ -1479,7 +1479,12 @@ async def plan_decline(args: dict) -> dict:
     },
 )
 async def plan_revise(args: dict) -> dict:
-    import asyncio
+    from nerve.agent.plan_service import (
+        PlanNotFound,
+        PlanNotPending,
+        TaskNotFound,
+        request_plan_revision,
+    )
 
     plan_id = args["plan_id"]
     feedback = (args.get("feedback", "") or "").strip()
@@ -1491,48 +1496,18 @@ async def plan_revise(args: dict) -> dict:
     if not feedback:
         return {"content": [{"type": "text", "text": "Feedback is required for revision requests."}]}
 
-    plan = await _db.get_plan(plan_id)
-    if not plan:
+    try:
+        result = await request_plan_revision(
+            db=_db, engine=_engine, plan_id=plan_id, feedback=feedback,
+        )
+    except PlanNotFound:
         return {"content": [{"type": "text", "text": f"Plan not found: {plan_id}"}]}
+    except TaskNotFound:
+        return {"content": [{"type": "text", "text": "Task not found for this plan."}]}
+    except PlanNotPending as exc:
+        return {"content": [{"type": "text", "text": str(exc)}]}
 
-    if plan["status"] != "pending":
-        return {"content": [{"type": "text", "text": f"Plan is '{plan['status']}' — only pending plans can be revised."}]}
-
-    task = await _db.get_task(plan["task_id"])
-    if not task:
-        return {"content": [{"type": "text", "text": f"Task not found: {plan['task_id']}"}]}
-
-    # Store feedback on the plan
-    await _db.update_plan(plan_id, feedback=feedback)
-
-    # Write task note
-    feedback_summary = feedback[:80] + "..." if len(feedback) > 80 else feedback
-    await task_update.handler({
-        "task_id": plan["task_id"],
-        "note": f"Revision requested for {plan_id}: {feedback_summary}",
-    })
-
-    # Send revision request to persistent planner session.
-    # Tell the planner to update the existing plan in-place via plan_update
-    # so the version history stays linked instead of producing an orphan via
-    # plan_propose.
-    feedback_prompt = (
-        f'Revise plan {plan_id} for task "{task["title"]}" based on this feedback:\n\n'
-        f"{feedback}\n\n"
-        f"Explore the codebase again if needed, then call "
-        f'plan_update(plan_id="{plan_id}", content="...", feedback="<short summary>") '
-        f"with the revised plan."
-    )
-
-    session_id = plan.get("session_id") or "cron:task-planner"
-    await _engine.sessions.get_or_create(
-        session_id, title=f"Cron: {session_id.split(':')[-1]}" if session_id.startswith("cron:") else session_id, source="cron",
-    )
-    asyncio.create_task(
-        _engine.run(session_id=session_id, user_message=feedback_prompt, source="cron")
-    )
-
-    return {"content": [{"type": "text", "text": f"Revision requested for {plan_id}. Feedback sent to planner session ({session_id})."}]}
+    return {"content": [{"type": "text", "text": f"Revision requested for {result['plan_id']}. Feedback sent to planner session ({result['session_id']})."}]}
 
 
 # --- Skill tools ---
